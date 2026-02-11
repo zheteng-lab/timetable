@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Manager - Live Cloud Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .slot-cell { transition: all 0.1s; cursor: pointer; border: 1px solid #f1f5f9; font-size: 10px; font-weight: bold; text-align: center; height: 40px; min-width: 80px; }
+        .slot-free { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+        .slot-booked { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .slot-trial { background-color: #fffbeb; border-color: #fef3c7; color: #92400e; }
+        .slot-off { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
+        .sidebar-active { background-color: #4f46e5; color: white; border-color: #4338ca; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans">
+
+    <!-- DEPLOYMENT VERIFICATION HELPER -->
+    <div id="deploymentCheck" class="bg-indigo-900 text-white text-[10px] py-1 px-4 text-center font-bold uppercase tracking-widest">
+        File Readiness: <span id="fileNameDisplay">Checking...</span> | Must be "index.html" for Netlify
+    </div>
+
+    <!-- CONNECTION OVERLAY -->
+    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center p-6 max-w-sm">
+            <div id="loadingSpinner" class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <h2 id="loadingTitle" class="text-lg font-bold text-slate-800 mb-2">Connecting to Cloud...</h2>
+            <p id="loadingText" class="text-slate-500 text-sm">Synchronizing live teacher schedules.</p>
+            
+            <div id="errorHelper" class="hidden mt-6 p-4 bg-red-50 rounded-xl border border-red-100 text-left">
+                <p class="text-xs text-red-700 font-bold mb-2 uppercase tracking-wider">Troubleshooting:</p>
+                <ol class="text-[11px] text-red-600 space-y-2 list-decimal ml-4">
+                    <li>Go to Firebase Console > Authentication.</li>
+                    <li>Click <b>Get Started</b>.</li>
+                    <li>Go to <b>Sign-in method</b> tab.</li>
+                    <li>Enable <b>Anonymous</b> and click Save.</li>
+                    <li class="bg-yellow-100 p-1 font-bold">RENAME CHECK: Ensure your file is named exactly <code class="bg-white px-1">index.html</code> (lowercase).</li>
+                </ol>
+                <button onclick="window.location.reload()" class="w-full mt-4 px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-xs shadow-lg">Retry Connection</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-4 lg:p-8">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Center <span class="text-indigo-600">Master List</span></h1>
+                <p class="text-xs text-slate-400 font-medium uppercase tracking-widest">Live Multi-User Database</p>
+            </div>
+            <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                <button id="viewBtn" class="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md">Sales Dashboard</button>
+                <button id="editBtn" class="px-6 py-2 text-sm font-bold rounded-lg text-slate-500 hover:bg-slate-50 transition-colors">Teacher Editor</button>
+            </div>
+        </header>
+
+        <!-- DASHBOARD SECTION -->
+        <div id="dashboardSection" class="space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-sm">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Filter Subject</label>
+                    <select id="filterSubject" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500" onchange="renderDashboard()">
+                        <option value="All">All Subjects</option>
+                        <option>Chinese</option><option>Malay</option><option>English</option><option>Maths</option><option>Science</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Filter Day</label>
+                    <select id="filterDay" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500" onchange="renderDashboard()">
+                        <option value="All">All Days</option>
+                        <option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option>
+                    </select>
+                </div>
+                <div class="flex flex-col items-end justify-center">
+                    <div id="liveStatus" class="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-black text-emerald-600 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> SYSTEM ONLINE
+                    </div>
+                </div>
+            </div>
+            <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+        </div>
+
+        <!-- EDITOR SECTION -->
+        <div id="editorSection" class="hidden flex flex-col md:flex-row gap-6">
+            <div class="w-full md:w-64 space-y-1 max-h-[70vh] overflow-y-auto pr-2" id="teacherSidebar"></div>
+            <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div>
+                        <h2 id="currentTeacherTitle" class="font-bold text-lg text-slate-800 uppercase tracking-tight">Select Teacher</h2>
+                        <select id="teacherSubject" class="text-xs bg-indigo-50 text-indigo-700 font-bold p-1 px-2 rounded mt-1 border-none cursor-pointer hover:bg-indigo-100" onchange="updateTeacherSubject(this.value)">
+                            <option>Chinese</option><option>Malay</option><option>English</option><option>Maths</option><option>Science</option>
+                        </select>
+                    </div>
+                    <div id="syncIndicator" class="text-[10px] font-bold text-slate-400 px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">Waiting</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead class="bg-slate-50/80">
+                            <tr id="tableHeader"></tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Check filename for user
+        const currentPath = window.location.pathname;
+        const fileName = currentPath.substring(currentPath.lastIndexOf('/') + 1) || "index.html (likely)";
+        const display = document.getElementById('fileNameDisplay');
+        display.innerText = fileName;
+        if (fileName.toLowerCase() !== 'index.html' && !window.location.hostname.includes('netlify')) {
+            display.parentElement.classList.replace('bg-indigo-900', 'bg-red-600');
+            display.innerHTML = `⚠️ WRONG NAME: "${fileName}" (Rename to index.html)`;
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
+            authDomain: "class-one-students-enquiry.firebaseapp.com",
+            projectId: "class-one-students-enquiry",
+            storageBucket: "class-one-students-enquiry.firebasestorage.app",
+            messagingSenderId: "808629452867",
+            appId: "1:808629452867:web:fc65ad3a56b08b258fd4f6"
+        };
+
+        const appId = "timetable-manager-pro";
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const teacherNames = [
+            "Adelynshia", "Avy Lau Hui Chwin", "Nur Zahraa Balqis Binti Abdullah", 
+            "Catherine Mu", "Chei Leng", "Cher Xi", "Ho Ling Yi", "Ho Yu Xun", 
+            "Hoh Kar Yee", "Jenna (Choong Lee Hung)", "Joy (Chai Yi Ling)", 
+            "Karen Lee Wai Leng", "Kelly Chong Kah Yee", "Lee Shok Yuong", 
+            "Lim Tze Wei (Candy)", "Loo Eling", "Manjusri Sivakumar", 
+            "Ooi Ming Yi", "Peggy Lok", "Sam", "Sherrenii", "Shirley Lim Shay Li", 
+            "Su Poh Yi", "Susan Siew", "Tan Jing En", "Tan Jing Ru", 
+            "Teh Dick Way", "Tze Ting", "Wendy Chee", "Wong Kai Ling", "Teow Jin Ming"
+        ];
+        
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const times = [];
+        for (let h = 9; h <= 21; h++) {
+            const p = h >= 12 ? 'PM' : 'AM';
+            const hr = h > 12 ? h - 12 : h;
+            times.push(`${hr}:00 ${p}`, `${hr}:30 ${p}`);
+        }
+
+        let teachersData = {};
+        let activeTeacher = teacherNames[0];
+
+        async function init() {
+            try {
+                await signInAnonymously(auth);
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'schedules');
+                onSnapshot(colRef, (snap) => {
+                    snap.forEach(doc => {
+                        teachersData[doc.id] = doc.data();
+                    });
+                    teacherNames.forEach(name => {
+                        if (!teachersData[name]) {
+                            teachersData[name] = { subject: 'Chinese', schedule: {} };
+                        }
+                    });
+                    document.getElementById('loading').classList.add('hidden');
+                    renderSidebar();
+                    renderDashboard();
+                    if(!document.getElementById('editorSection').classList.contains('hidden')) renderEditor();
+                }, (err) => {
+                    showError("Access Denied: Check Firebase Rules or Auth settings.");
+                });
+            } catch (err) {
+                showError("Auth Required: " + err.message);
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingSpinner').classList.add('hidden');
+            document.getElementById('loadingTitle').innerText = "Database Offline";
+            document.getElementById('loadingText').innerText = msg;
+            document.getElementById('errorHelper').classList.remove('hidden');
+        }
+
+        function renderSidebar() {
+            const container = document.getElementById('teacherSidebar');
+            container.innerHTML = teacherNames.map(name => `
+                <button onclick="window.setActiveTeacher('${name}')" class="w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold border transition-all ${name === activeTeacher ? 'sidebar-active' : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'}">
+                    ${name}
+                </button>
+            `).join('');
+        }
+
+        window.setActiveTeacher = (name) => {
+            activeTeacher = name;
+            renderSidebar();
+            renderEditor();
+        };
+
+        window.updateTeacherSubject = async (val) => {
+            if(!teachersData[activeTeacher]) return;
+            teachersData[activeTeacher].subject = val;
+            saveTeacher(activeTeacher);
+        };
+
+        async function saveTeacher(name) {
+            const indicator = document.getElementById('syncIndicator');
+            indicator.innerText = "Saving...";
+            indicator.className = "text-[10px] font-bold text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100";
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedules', name);
+                await setDoc(docRef, teachersData[name]);
+                indicator.innerText = "Saved to Cloud";
+                indicator.className = "text-[10px] font-bold text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100";
+                renderDashboard();
+            } catch (e) {
+                indicator.innerText = "Error Saving";
+                indicator.className = "text-[10px] font-bold text-red-500 bg-red-50 px-3 py-1 rounded-full border border-red-100";
+            }
+        }
+
+        window.toggleSlot = (day, time) => {
+            const key = `${day}-${time}`;
+            const states = ['OFF', 'FREE', 'BOOKED', 'TRIAL'];
+            const current = (teachersData[activeTeacher] && teachersData[activeTeacher].schedule[key]) || 'OFF';
+            const next = states[(states.indexOf(current) + 1) % states.length];
+            if(!teachersData[activeTeacher].schedule) teachersData[activeTeacher].schedule = {};
+            teachersData[activeTeacher].schedule[key] = next;
+            const el = document.getElementById(`cell-${key}`);
+            if(el) {
+                el.className = `slot-cell slot-${next.toLowerCase()}`;
+                el.innerText = next;
+            }
+            saveTeacher(activeTeacher);
+        };
+
+        function renderEditor() {
+            document.getElementById('currentTeacherTitle').innerText = activeTeacher;
+            document.getElementById('teacherSubject').value = (teachersData[activeTeacher] && teachersData[activeTeacher].subject) || 'Chinese';
+            const head = document.getElementById('tableHeader');
+            head.innerHTML = '<th class="p-2 text-[10px] text-slate-400 border-b border-slate-100">Time</th>' + 
+                days.map(d => `<th class="p-2 text-[10px] text-slate-400 border-b border-slate-100">${d}</th>`).join('');
+            const body = document.getElementById('tableBody');
+            body.innerHTML = times.map(t => `
+                <tr class="hover:bg-slate-50/50">
+                    <td class="p-2 text-[9px] font-bold text-slate-400 bg-slate-50/30 border-b border-white">${t}</td>
+                    ${days.map(d => {
+                        const status = (teachersData[activeTeacher] && teachersData[activeTeacher].schedule[`${d}-${t}`]) || 'OFF';
+                        return `<td id="cell-${d}-${t}" onclick="toggleSlot('${d}', '${t}')" class="slot-cell slot-${status.toLowerCase()}">${status}</td>`;
+                    }).join('')}
+                </tr>
+            `).join('');
+        }
+
+        window.renderDashboard = () => {
+            const subFilter = document.getElementById('filterSubject').value;
+            const dayFilter = document.getElementById('filterDay').value;
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = '';
+            let found = 0;
+            teacherNames.forEach(name => {
+                const data = teachersData[name];
+                if (!data || !data.schedule) return;
+                if (subFilter !== 'All' && data.subject !== subFilter) return;
+                days.forEach(d => {
+                    if (dayFilter !== 'All' && d !== dayFilter) return;
+                    times.forEach(t => {
+                        const status = data.schedule[`${d}-${t}`];
+                        if (status === 'FREE' || status === 'TRIAL') {
+                            found++;
+                            grid.innerHTML += `
+                                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-all hover:shadow-md group">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <span class="text-xs font-bold text-slate-800 truncate pr-2 group-hover:text-indigo-600 transition-colors">${name}</span>
+                                        <span class="text-[9px] px-2 py-0.5 rounded-full font-black tracking-tight ${status === 'FREE' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${status}</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 mb-3 font-medium">${data.subject}</div>
+                                    <div class="flex justify-between items-center text-[11px] font-bold text-slate-800 border-t border-slate-50 pt-3">
+                                        <span class="text-indigo-600">${d}</span>
+                                        <span class="bg-slate-50 px-2 py-0.5 rounded border border-slate-100">${t}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                });
+            });
+            if (found === 0) grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 text-sm italic font-medium">No matches found for your current filters.</div>';
+        };
+
+        document.getElementById('viewBtn').onclick = () => {
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('editorSection').classList.add('hidden');
+            document.getElementById('viewBtn').className = "px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md";
+            document.getElementById('editBtn').className = "px-6 py-2 text-sm font-bold rounded-lg text-slate-500 hover:bg-slate-100";
+            renderDashboard();
+        };
+        document.getElementById('editBtn').onclick = () => {
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('editorSection').classList.remove('hidden');
+            document.getElementById('editBtn').className = "px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md";
+            document.getElementById('viewBtn').className = "px-6 py-2 text-sm font-bold rounded-lg text-slate-500 hover:bg-slate-100";
+            renderEditor();
+        };
+
+        init();
+    </script>
+</body>
+</html>
