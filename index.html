@@ -9,7 +9,6 @@
         .slot-cell { transition: all 0.1s; cursor: pointer; border: 1px solid #f1f5f9; font-size: 10px; font-weight: bold; text-align: center; height: 40px; min-width: 80px; }
         .slot-free { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
         .slot-booked { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
-        .slot-trial { background-color: #fffbeb; border-color: #fef3c7; color: #92400e; }
         .slot-off { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
         .sidebar-active { background-color: #4f46e5; color: white; border-color: #4338ca; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
     </style>
@@ -20,12 +19,8 @@
     <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center transition-opacity duration-500">
         <div class="text-center p-6">
             <div id="loadingSpinner" class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <h2 id="loadingTitle" class="text-base font-bold text-slate-800 mb-1">Synchronizing Data</h2>
-            <p id="loadingText" class="text-slate-400 text-xs">Accessing live center schedules...</p>
-            
-            <div id="errorHelper" class="hidden mt-6">
-                <button onclick="window.location.reload()" class="px-6 py-2 bg-slate-800 text-white rounded-lg font-bold text-xs shadow-lg">Retry Connection</button>
-            </div>
+            <h2 class="text-base font-bold text-slate-800 mb-1">Synchronizing Data</h2>
+            <p class="text-slate-400 text-xs">Accessing live center schedules...</p>
         </div>
     </div>
 
@@ -48,7 +43,7 @@
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Filter Subject</label>
                     <select id="filterSubject" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500" onchange="renderDashboard()">
                         <option value="All">All Subjects</option>
-                        <option>Chinese</option><option>Malay</option><option>English</option><option>Maths</option><option>Science</option>
+                        <option>BC</option><option>BM</option><option>BI</option><option>PK</option><option>SOK</option>
                     </select>
                 </div>
                 <div class="space-y-1">
@@ -69,14 +64,12 @@
 
         <!-- EDITOR SECTION -->
         <div id="editorSection" class="hidden flex flex-col md:flex-row gap-6">
-            <div class="w-full md:w-64 space-y-1 max-h-[70vh] overflow-y-auto pr-2" id="teacherSidebar"></div>
+            <div class="w-full md:w-72 space-y-1 max-h-[75vh] overflow-y-auto pr-2" id="teacherSidebar"></div>
             <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                 <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
                         <h2 id="currentTeacherTitle" class="font-bold text-lg text-slate-800 uppercase tracking-tight">Select Teacher</h2>
-                        <select id="teacherSubject" class="text-xs bg-indigo-50 text-indigo-700 font-bold p-1 px-2 rounded mt-1 border-none cursor-pointer hover:bg-indigo-100" onchange="updateTeacherSubject(this.value)">
-                            <option>Chinese</option><option>Malay</option><option>English</option><option>Maths</option><option>Science</option>
-                        </select>
+                        <div id="teacherDetailsDisplay" class="text-[10px] font-bold text-indigo-600 uppercase"></div>
                     </div>
                     <div id="syncIndicator" class="text-[10px] font-bold text-slate-400 px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">Cloud Ready</div>
                 </div>
@@ -106,20 +99,45 @@
             appId: "1:808629452867:web:fc65ad3a56b08b258fd4f6"
         };
 
-        const appId = "timetable-manager-pro";
+        const appId = "timetable-manager-pro-v3";
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const teacherNames = [
-            "Adelynshia", "Avy Lau Hui Chwin", "Nur Zahraa Balqis Binti Abdullah", 
-            "Catherine Mu", "Chei Leng", "Cher Xi", "Ho Ling Yi", "Ho Yu Xun", 
-            "Hoh Kar Yee", "Jenna (Choong Lee Hung)", "Joy (Chai Yi Ling)", 
-            "Karen Lee Wai Leng", "Kelly Chong Kah Yee", "Lee Shok Yuong", 
-            "Lim Tze Wei (Candy)", "Loo Eling", "Manjusri Sivakumar", 
-            "Ooi Ming Yi", "Peggy Lok", "Sam", "Sherrenii", "Shirley Lim Shay Li", 
-            "Su Poh Yi", "Susan Siew", "Tan Jing En", "Tan Jing Ru", 
-            "Teh Dick Way", "Tze Ting", "Wendy Chee", "Wong Kai Ling", "Teow Jin Ming"
+        const teacherMetadata = [
+            { name: "Peggy Lok", subjects: ["BC"], assessment: true },
+            { name: "Chei Leng", subjects: ["BC"], assessment: false },
+            { name: "Adelynshia", subjects: ["BM", "PK"], assessment: true },
+            { name: "Aubrey", subjects: ["SOK"], assessment: false },
+            { name: "Avy Lau Hui Chwin", subjects: ["BM", "PK"], assessment: false },
+            { name: "Nur Zahraa Balqis", subjects: ["BM", "PK"], assessment: false },
+            { name: "Catherine Mu", subjects: ["BC"], assessment: false },
+            { name: "Cher Xi", subjects: ["BC"], assessment: false },
+            { name: "Ho Ling Yi", subjects: ["PK"], assessment: false },
+            { name: "Ho Yu Xun", subjects: ["BC"], assessment: false },
+            { name: "Hoh Kar Yee", subjects: ["BM"], assessment: false },
+            { name: "Jenna Choong Lee Hung", subjects: ["BC", "BM"], assessment: false },
+            { name: "Joy Chai Yi Ling", subjects: ["BC"], assessment: false },
+            { name: "Karen Lee Wai Leng", subjects: ["BC"], assessment: true },
+            { name: "Kelly Chong Kah Yee", subjects: ["BM", "PK"], assessment: false },
+            { name: "Lee Shok Yuong", subjects: ["BC"], assessment: false },
+            { name: "Lee Pek Kian", subjects: ["BI"], assessment: false },
+            { name: "Lim Mei King", subjects: ["BI"], assessment: false },
+            { name: "Lim Tze Wei (Candy)", subjects: ["BC"], assessment: false },
+            { name: "Loo Eling", subjects: ["BC"], assessment: false },
+            { name: "Manjusri Sivakumar", subjects: ["BI", "SOK"], assessment: false },
+            { name: "Ooi Ming Yi", subjects: ["BI", "SOK"], assessment: false },
+            { name: "Sam", subjects: ["SOK"], assessment: false },
+            { name: "Sherrenii", subjects: ["BI", "SOK"], assessment: false },
+            { name: "Shirley Lim Shay Li", subjects: ["BC", "BI"], assessment: true },
+            { name: "Su Poh Yi", subjects: ["BC"], assessment: false },
+            { name: "Susan Siew", subjects: ["BC", "BM", "PK"], assessment: false },
+            { name: "Tan Jing En", subjects: ["BM"], assessment: false },
+            { name: "Tan Jing Ru", subjects: ["BM"], assessment: false },
+            { name: "Tan Tze Ting", subjects: ["BM", "PK"], assessment: true },
+            { name: "Teh Dick Way", subjects: ["SOK"], assessment: false },
+            { name: "Wendy Chee", subjects: ["BC"], assessment: false },
+            { name: "Wong Kai Ling", subjects: ["BC"], assessment: true }
         ];
         
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -131,7 +149,7 @@
         }
 
         let teachersData = {};
-        let activeTeacher = teacherNames[0];
+        let activeTeacherName = teacherMetadata[0].name;
 
         async function init() {
             try {
@@ -141,95 +159,88 @@
                     snap.forEach(doc => {
                         teachersData[doc.id] = doc.data();
                     });
-                    teacherNames.forEach(name => {
-                        if (!teachersData[name]) {
-                            teachersData[name] = { subject: 'Chinese', schedule: {} };
+                    
+                    teacherMetadata.forEach(t => {
+                        if (!teachersData[t.name]) {
+                            teachersData[t.name] = { schedule: {} };
                         }
                     });
+
                     document.getElementById('loading').style.opacity = '0';
                     setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
                     renderSidebar();
                     renderDashboard();
                     if(!document.getElementById('editorSection').classList.contains('hidden')) renderEditor();
-                }, (err) => {
-                    showError("Connection failed. Check your internet.");
                 });
             } catch (err) {
-                showError("System offline.");
+                console.error(err);
             }
-        }
-
-        function showError(msg) {
-            document.getElementById('loadingSpinner').classList.add('hidden');
-            document.getElementById('loadingTitle').innerText = "Oops!";
-            document.getElementById('loadingText').innerText = msg;
-            document.getElementById('errorHelper').classList.remove('hidden');
         }
 
         function renderSidebar() {
             const container = document.getElementById('teacherSidebar');
-            container.innerHTML = teacherNames.map(name => `
-                <button onclick="window.setActiveTeacher('${name}')" class="w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold border transition-all ${name === activeTeacher ? 'sidebar-active' : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'}">
-                    ${name}
+            container.innerHTML = teacherMetadata.map(t => `
+                <button onclick="window.setActiveTeacher('${t.name}')" class="w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold border transition-all ${t.name === activeTeacherName ? 'sidebar-active' : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'}">
+                    <div class="flex justify-between items-center">
+                        <span>${t.name}</span>
+                        <span class="text-[8px] opacity-60">${t.subjects.join('/')}</span>
+                    </div>
                 </button>
             `).join('');
         }
 
         window.setActiveTeacher = (name) => {
-            activeTeacher = name;
+            activeTeacherName = name;
             renderSidebar();
             renderEditor();
-        };
-
-        window.updateTeacherSubject = async (val) => {
-            if(!teachersData[activeTeacher]) return;
-            teachersData[activeTeacher].subject = val;
-            saveTeacher(activeTeacher);
         };
 
         async function saveTeacher(name) {
             const indicator = document.getElementById('syncIndicator');
             indicator.innerText = "Syncing...";
-            indicator.className = "text-[10px] font-bold text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100";
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedules', name);
                 await setDoc(docRef, teachersData[name]);
                 indicator.innerText = "Cloud Updated";
-                indicator.className = "text-[10px] font-bold text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100";
                 renderDashboard();
             } catch (e) {
-                indicator.innerText = "Sync Failed";
-                indicator.className = "text-[10px] font-bold text-red-500 bg-red-50 px-3 py-1 rounded-full border border-red-100";
+                indicator.innerText = "Sync Error";
             }
         }
 
         window.toggleSlot = (day, time) => {
             const key = `${day}-${time}`;
-            const states = ['OFF', 'FREE', 'BOOKED', 'TRIAL'];
-            const current = (teachersData[activeTeacher] && teachersData[activeTeacher].schedule[key]) || 'OFF';
+            const states = ['OFF', 'FREE', 'BOOKED'];
+            const current = (teachersData[activeTeacherName] && teachersData[activeTeacherName].schedule[key]) || 'OFF';
             const next = states[(states.indexOf(current) + 1) % states.length];
-            if(!teachersData[activeTeacher].schedule) teachersData[activeTeacher].schedule = {};
-            teachersData[activeTeacher].schedule[key] = next;
+            
+            if(!teachersData[activeTeacherName].schedule) teachersData[activeTeacherName].schedule = {};
+            teachersData[activeTeacherName].schedule[key] = next;
+            
             const el = document.getElementById(`cell-${key}`);
             if(el) {
                 el.className = `slot-cell slot-${next.toLowerCase()}`;
                 el.innerText = next;
             }
-            saveTeacher(activeTeacher);
+            saveTeacher(activeTeacherName);
         };
 
         function renderEditor() {
-            document.getElementById('currentTeacherTitle').innerText = activeTeacher;
-            document.getElementById('teacherSubject').value = (teachersData[activeTeacher] && teachersData[activeTeacher].subject) || 'Chinese';
+            const meta = teacherMetadata.find(t => t.name === activeTeacherName);
+            document.getElementById('currentTeacherTitle').innerText = activeTeacherName;
+            document.getElementById('teacherDetailsDisplay').innerText = 
+                `${meta.subjects.join(' & ')} ${meta.assessment ? '• EXAM & ASSESSMENT' : ''}`;
+
             const head = document.getElementById('tableHeader');
             head.innerHTML = '<th class="p-2 text-[10px] text-slate-400 border-b border-slate-100">Time</th>' + 
                 days.map(d => `<th class="p-2 text-[10px] text-slate-400 border-b border-slate-100">${d}</th>`).join('');
+            
             const body = document.getElementById('tableBody');
             body.innerHTML = times.map(t => `
                 <tr class="hover:bg-slate-50/50">
                     <td class="p-2 text-[9px] font-bold text-slate-400 bg-slate-50/30 border-b border-white">${t}</td>
                     ${days.map(d => {
-                        const status = (teachersData[activeTeacher] && teachersData[activeTeacher].schedule[`${d}-${t}`]) || 'OFF';
+                        const status = (teachersData[activeTeacherName] && teachersData[activeTeacherName].schedule[`${d}-${t}`]) || 'OFF';
                         return `<td id="cell-${d}-${t}" onclick="toggleSlot('${d}', '${t}')" class="slot-cell slot-${status.toLowerCase()}">${status}</td>`;
                     }).join('')}
                 </tr>
@@ -242,23 +253,30 @@
             const grid = document.getElementById('resultsGrid');
             grid.innerHTML = '';
             let found = 0;
-            teacherNames.forEach(name => {
-                const data = teachersData[name];
+
+            teacherMetadata.forEach(meta => {
+                const data = teachersData[meta.name];
                 if (!data || !data.schedule) return;
-                if (subFilter !== 'All' && data.subject !== subFilter) return;
+                
+                // Filter by Subject
+                if (subFilter !== 'All' && !meta.subjects.includes(subFilter)) return;
+
                 days.forEach(d => {
                     if (dayFilter !== 'All' && d !== dayFilter) return;
                     times.forEach(t => {
                         const status = data.schedule[`${d}-${t}`];
-                        if (status === 'FREE' || status === 'TRIAL') {
+                        if (status === 'FREE') {
                             found++;
                             grid.innerHTML += `
                                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-all hover:shadow-md group">
                                     <div class="flex justify-between items-start mb-1">
-                                        <span class="text-xs font-bold text-slate-800 truncate pr-2 group-hover:text-indigo-600 transition-colors">${name}</span>
-                                        <span class="text-[9px] px-2 py-0.5 rounded-full font-black tracking-tight ${status === 'FREE' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${status}</span>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-slate-800 truncate pr-2 group-hover:text-indigo-600 transition-colors">${meta.name}</span>
+                                            ${meta.assessment ? '<span class="text-[8px] text-indigo-500 font-bold">EXAM / ASSESS READY</span>' : ''}
+                                        </div>
+                                        <span class="text-[9px] px-2 py-0.5 rounded-full font-black tracking-tight bg-green-100 text-green-700">FREE</span>
                                     </div>
-                                    <div class="text-[10px] text-slate-400 mb-3 font-medium">${data.subject}</div>
+                                    <div class="text-[10px] text-slate-400 mb-3 font-medium">${meta.subjects.join(' & ')}</div>
                                     <div class="flex justify-between items-center text-[11px] font-bold text-slate-800 border-t border-slate-50 pt-3">
                                         <span class="text-indigo-600">${d}</span>
                                         <span class="bg-slate-50 px-2 py-0.5 rounded border border-slate-100">${t}</span>
@@ -269,7 +287,7 @@
                     });
                 });
             });
-            if (found === 0) grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 text-sm italic font-medium">No slots found.</div>';
+            if (found === 0) grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 text-sm italic font-medium">No matches found for your current filters.</div>';
         };
 
         document.getElementById('viewBtn').onclick = () => {
