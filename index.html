@@ -16,28 +16,15 @@
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
 
-    <!-- DEPLOYMENT VERIFICATION HELPER -->
-    <div id="deploymentCheck" class="bg-indigo-900 text-white text-[10px] py-1 px-4 text-center font-bold uppercase tracking-widest">
-        File Readiness: <span id="fileNameDisplay">Checking...</span> | Must be "index.html" for Netlify
-    </div>
-
-    <!-- CONNECTION OVERLAY -->
-    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div class="text-center p-6 max-w-sm">
-            <div id="loadingSpinner" class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <h2 id="loadingTitle" class="text-lg font-bold text-slate-800 mb-2">Connecting to Cloud...</h2>
-            <p id="loadingText" class="text-slate-500 text-sm">Synchronizing live teacher schedules.</p>
+    <!-- CLEAN LOADING OVERLAY -->
+    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center transition-opacity duration-500">
+        <div class="text-center p-6">
+            <div id="loadingSpinner" class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <h2 id="loadingTitle" class="text-base font-bold text-slate-800 mb-1">Synchronizing Data</h2>
+            <p id="loadingText" class="text-slate-400 text-xs">Accessing live center schedules...</p>
             
-            <div id="errorHelper" class="hidden mt-6 p-4 bg-red-50 rounded-xl border border-red-100 text-left">
-                <p class="text-xs text-red-700 font-bold mb-2 uppercase tracking-wider">Troubleshooting:</p>
-                <ol class="text-[11px] text-red-600 space-y-2 list-decimal ml-4">
-                    <li>Go to Firebase Console > Authentication.</li>
-                    <li>Click <b>Get Started</b>.</li>
-                    <li>Go to <b>Sign-in method</b> tab.</li>
-                    <li>Enable <b>Anonymous</b> and click Save.</li>
-                    <li class="bg-yellow-100 p-1 font-bold">RENAME CHECK: Ensure your file is named exactly <code class="bg-white px-1">index.html</code> (lowercase).</li>
-                </ol>
-                <button onclick="window.location.reload()" class="w-full mt-4 px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-xs shadow-lg">Retry Connection</button>
+            <div id="errorHelper" class="hidden mt-6">
+                <button onclick="window.location.reload()" class="px-6 py-2 bg-slate-800 text-white rounded-lg font-bold text-xs shadow-lg">Retry Connection</button>
             </div>
         </div>
     </div>
@@ -46,10 +33,10 @@
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Center <span class="text-indigo-600">Master List</span></h1>
-                <p class="text-xs text-slate-400 font-medium uppercase tracking-widest">Live Multi-User Database</p>
+                <p class="text-xs text-slate-400 font-medium uppercase tracking-widest">Live Cloud Database</p>
             </div>
             <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-                <button id="viewBtn" class="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md">Sales Dashboard</button>
+                <button id="viewBtn" class="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md transition-all">Sales Dashboard</button>
                 <button id="editBtn" class="px-6 py-2 text-sm font-bold rounded-lg text-slate-500 hover:bg-slate-50 transition-colors">Teacher Editor</button>
             </div>
         </header>
@@ -91,7 +78,7 @@
                             <option>Chinese</option><option>Malay</option><option>English</option><option>Maths</option><option>Science</option>
                         </select>
                     </div>
-                    <div id="syncIndicator" class="text-[10px] font-bold text-slate-400 px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">Waiting</div>
+                    <div id="syncIndicator" class="text-[10px] font-bold text-slate-400 px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">Cloud Ready</div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse">
@@ -109,16 +96,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Check filename for user
-        const currentPath = window.location.pathname;
-        const fileName = currentPath.substring(currentPath.lastIndexOf('/') + 1) || "index.html (likely)";
-        const display = document.getElementById('fileNameDisplay');
-        display.innerText = fileName;
-        if (fileName.toLowerCase() !== 'index.html' && !window.location.hostname.includes('netlify')) {
-            display.parentElement.classList.replace('bg-indigo-900', 'bg-red-600');
-            display.innerHTML = `⚠️ WRONG NAME: "${fileName}" (Rename to index.html)`;
-        }
 
         const firebaseConfig = {
             apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
@@ -169,21 +146,22 @@
                             teachersData[name] = { subject: 'Chinese', schedule: {} };
                         }
                     });
-                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('loading').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
                     renderSidebar();
                     renderDashboard();
                     if(!document.getElementById('editorSection').classList.contains('hidden')) renderEditor();
                 }, (err) => {
-                    showError("Access Denied: Check Firebase Rules or Auth settings.");
+                    showError("Connection failed. Check your internet.");
                 });
             } catch (err) {
-                showError("Auth Required: " + err.message);
+                showError("System offline.");
             }
         }
 
         function showError(msg) {
             document.getElementById('loadingSpinner').classList.add('hidden');
-            document.getElementById('loadingTitle').innerText = "Database Offline";
+            document.getElementById('loadingTitle').innerText = "Oops!";
             document.getElementById('loadingText').innerText = msg;
             document.getElementById('errorHelper').classList.remove('hidden');
         }
@@ -211,16 +189,16 @@
 
         async function saveTeacher(name) {
             const indicator = document.getElementById('syncIndicator');
-            indicator.innerText = "Saving...";
+            indicator.innerText = "Syncing...";
             indicator.className = "text-[10px] font-bold text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100";
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedules', name);
                 await setDoc(docRef, teachersData[name]);
-                indicator.innerText = "Saved to Cloud";
+                indicator.innerText = "Cloud Updated";
                 indicator.className = "text-[10px] font-bold text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100";
                 renderDashboard();
             } catch (e) {
-                indicator.innerText = "Error Saving";
+                indicator.innerText = "Sync Failed";
                 indicator.className = "text-[10px] font-bold text-red-500 bg-red-50 px-3 py-1 rounded-full border border-red-100";
             }
         }
@@ -291,7 +269,7 @@
                     });
                 });
             });
-            if (found === 0) grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 text-sm italic font-medium">No matches found for your current filters.</div>';
+            if (found === 0) grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 text-sm italic font-medium">No slots found.</div>';
         };
 
         document.getElementById('viewBtn').onclick = () => {
