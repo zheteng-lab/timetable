@@ -11,6 +11,7 @@
         .slot-booked { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
         .slot-off { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
         .sidebar-active { background-color: #4f46e5; color: white; border-color: #4338ca; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
@@ -64,7 +65,7 @@
 
         <!-- EDITOR SECTION -->
         <div id="editorSection" class="hidden flex flex-col md:flex-row gap-6">
-            <div class="w-full md:w-72 space-y-1 max-h-[75vh] overflow-y-auto pr-2" id="teacherSidebar"></div>
+            <div class="w-full md:w-72 space-y-1 max-h-[75vh] overflow-y-auto pr-2 scrollbar-hide" id="teacherSidebar"></div>
             <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                 <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
@@ -258,8 +259,9 @@
                 const data = teachersData[meta.name];
                 if (!data || !data.schedule) return;
                 
-                // Filter by Subject
-                if (subFilter !== 'All' && !meta.subjects.includes(subFilter)) return;
+                // Enhanced Filter logic: Check if teacher's subjects array contains the filter
+                const subjectMatch = subFilter === 'All' || meta.subjects.includes(subFilter);
+                if (!subjectMatch) return;
 
                 days.forEach(d => {
                     if (dayFilter !== 'All' && d !== dayFilter) return;
