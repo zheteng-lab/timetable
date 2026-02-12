@@ -110,7 +110,7 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz7VEwAn6bxLkcrHi0sOtOcZjl-q5VnLc1SaVKvAShRVte8ehlbOqCHoIhOLiE36jZn/exec";
+        const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxRxbkVf7VZgIrKP0cYrDFBTqYsP2DFQfHADPWt6dp-4hdb8BMhH19GsjIp64Wux_ir/exec";
 
         const firebaseConfig = {
             apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
@@ -207,7 +207,7 @@
         async function syncFromGoogleSheets() {
             const el = document.getElementById('sheetStatus');
             try {
-                const res = await fetch(https://script.google.com/macros/s/AKfycbz7VEwAn6bxLkcrHi0sOtOcZjl-q5VnLc1SaVKvAShRVte8ehlbOqCHoIhOLiE36jZn/exec);
+                const res = await fetch(https://script.google.com/macros/s/AKfycbxRxbkVf7VZgIrKP0cYrDFBTqYsP2DFQfHADPWt6dp-4hdb8BMhH19GsjIp64Wux_ir/exec);
                 const data = await res.json();
                 el.innerText = "SHEETS SYNCED";
                 el.className = "px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[9px] font-black text-indigo-600 flex items-center gap-2";
