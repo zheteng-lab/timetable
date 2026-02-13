@@ -242,7 +242,7 @@
           measurementId: "G-BXL181G4N0"
         };
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxlTyY0v3L67Jc_ZVJDaZ91kXtBLexEKW35zluFR0_LUNXQ9YE69Z8SbbLE1tqcz6P/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz31TC2ALv8OgJmDL0DnlP_-7bqbecishLIrAHqZasZisVQA_uu8gvFn2e6q1bHMIuR/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
         
         const app = initializeApp(firebaseConfig);
@@ -342,15 +342,14 @@
         }
 
        window.formatTime = function(t) {
-        return typeof t === 'string' ? t.toLowerCase().replace(/\s/g, '') : t;
-        };
-        
-        // Fallback for Date objects if any still exist
+        // If the data is already a string like "9:00am", just return it
+        if (typeof t === 'string') return t.toLowerCase().replace(/\s/g, '');
+    
+        // Fallback for Date objects if they somehow get through
         const d = new Date(t);
-        if (isNaN(d.getTime())) return t; // Return raw if not a date
+        if (isNaN(d.getTime())) return t;
         let h = d.getHours();
         let m = d.getMinutes();
-        if (m < 15) m = 0; else if (m < 45) m = 30; else { m = 0; h += 1; }
         const ampm = h >= 12 ? 'pm' : 'am';
         const h12 = h % 12 || 12;
         return `${h12}:${m === 0 ? '00' : m}${ampm}`;
