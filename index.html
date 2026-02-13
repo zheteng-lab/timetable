@@ -231,7 +231,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywIrTQoe2v-4kNOqX08vgstk7_X9qzz-OgN-jiHAZ4-8Mrrp_UncFALfX9hQ43oATD/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbys6yREf2ls_WsZL-fnGfAKZM1d07FeGJW3l25x9cSTEH3Yh2k-8EMxXQ4yrFh7Yh_U/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
         
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -330,13 +330,19 @@
             });
         }
 
-        window.formatTime = function(t) {
-            const d = new Date(t);
-            let h = d.getHours();
-            let m = d.getMinutes();
-            if (m < 15) m = 0; else if (m < 45) m = 30; else { m = 0; h += 1; }
-            return `${h % 12 || 12}:${m === 0 ? '00' : m}${h >= 12 ? 'pm' : 'am'}`;
-        };
+       window.formatTime = function(t) {
+        // If it's already a string like "9:00 AM", just return it or normalize it
+        if (typeof t === 'string') return t.toLowerCase().replace(/\s/g, '');
+    
+        // Fallback for Date objects
+        const d = new Date(t);
+        let h = d.getHours();
+        let m = d.getMinutes();
+        if (m < 15) m = 0; else if (m < 45) m = 30; else { m = 0; h += 1; }
+        const ampm = h >= 12 ? 'pm' : 'am';
+        const h12 = h % 12 || 12;
+        return `${h12}:${m === 0 ? '00' : m}${ampm}`;
+    };
 
         window.setStatusFilter = function(val) {
             statusFilter = val;
