@@ -228,24 +228,23 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
+        // THE CORRECTED CONFIG
         const firebaseConfig = {
-          apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
-          authDomain: "class-one-students-enquiry.firebaseapp.com",
-          databaseURL: "https://class-one-students-enquiry-default-rtdb.asia-southeast1.firebasedatabase.app", 
-          projectId: "class-one-students-enquiry",
-          storageBucket: "class-one-students-enquiry.firebasestorage.app",
-          messagingSenderId: "808629452867",
-          appId: "1:808629452867:web:fc65ad3a56b08b258fd4f6",
-          measurementId: "G-BXL181G4N0"
+            apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
+            authDomain: "class-one-students-enquiry.firebaseapp.com",
+            databaseURL: "https://class-one-students-enquiry-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "class-one-students-enquiry",
+            storageBucket: "class-one-students-enquiry.firebasestorage.app",
+            messagingSenderId: "808629452867",
+            appId: "1:808629452867:web:fc65ad3a56b08b258fd4f6",
+            measurementId: "G-BXL181G4N0"
         };
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAO7b45XDhvbnrOxuJS3Kl5XNNQFjP8WBA7B4m2Esxo7eNmBOrfG2d84So15kgfR5y/exec";
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
-        
+        const appId = 'timetable-manager-pro-v3';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -253,7 +252,8 @@
 
         let masterData = [];
         let cloudBookings = [];
-        let currentUserId = null;
+        let currentView = 'list';
+        let statusFilter = 'all';
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const TIMES = [];
@@ -265,7 +265,8 @@
             }
         }
 
-        const init = async () => {
+        async function init() {
+            // Setup Time Dropdown
             const timeFilter = document.getElementById('timeFilter');
             TIMES.forEach(t => {
                 const opt = document.createElement('option');
@@ -273,67 +274,44 @@
                 timeFilter.appendChild(opt);
             });
 
+            // Set default week
             const now = new Date();
             const year = now.getFullYear();
             const week = getWeekNumber(now);
             document.getElementById('weekPicker').value = `${year}-W${String(week).padStart(2, '0')}`;
 
             try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                try {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } catch (tokenErr) {
-                    console.warn("Auth mismatch, falling back to anonymous login...");
-                    await signInAnonymously(auth);
-                }
-            } else {
                 await signInAnonymously(auth);
+                setupRealtimeSync();
+            } catch (err) {
+                updateStatus("Auth Error", "bg-red-500");
             }
-            
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    setupRealtimeSync();
-                    window.fetchSheetData();
-                }
-            });
-        } catch (err) { 
-            console.error("Critical Auth Error:", err);
-            updateStatus("Error", "bg-red-500"); 
-        }
-    };
-        function getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
         }
 
         function setupRealtimeSync() {
-        // 1. Keep syncing Bookings from Firestore
-        const bookingsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
-        onSnapshot(bookingsRef, (snap) => {
-            cloudBookings = [];
-            snap.forEach(doc => cloudBookings.push({ ...doc.data(), id: doc.id }));
-            window.render();
-        });
-
-        // 2. FIXED: Sync Teacher Availability from Realtime Database (Instant)
-        const masterRef = ref(rtdb, 'master');
-        onValue(masterRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                masterData = Array.isArray(data) ? data : Object.values(data);
-                updateStatus("Live", "bg-green-500");
-                populateTeachers();
+            // 1. Sync Bookings (Firestore)
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bookings'), (snap) => {
+                cloudBookings = snap.docs.map(d => ({ ...d.data(), id: d.id }));
                 window.render();
-            }
-        });
-    }
+            });
+
+            // 2. Sync Availability (Realtime Database Singapore)
+            const masterRef = ref(rtdb, 'master');
+            onValue(masterRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    masterData = Array.isArray(data) ? data : Object.values(data);
+                    updateStatus("Live", "bg-green-500");
+                    populateTeachers();
+                    window.render();
+                } else {
+                    updateStatus("Empty DB", "bg-yellow-500");
+                }
+            });
+        }
 
         function populateTeachers() {
             const select = document.getElementById('teacherFilter');
-            if (!select) return;
             const teachers = [...new Set(masterData.map(i => i.teacher))].filter(Boolean).sort();
             select.innerHTML = '<option value="ALL">All Teachers</option>';
             teachers.forEach(t => {
@@ -342,326 +320,193 @@
             });
         }
 
-       window.formatTime = function(t) {
-    // If the time is already a string like "9:00am", use it directly
-    if (typeof t === 'string') return t.toLowerCase().replace(/\s/g, '');
-    
-    // Fallback for Date objects
-    const d = new Date(t);
-    if (isNaN(d.getTime())) return t;
-    let h = d.getHours();
-    let m = d.getMinutes();
-    const ampm = h >= 12 ? 'pm' : 'am';
-    const h12 = h % 12 || 12;
-    return `${h12}:${m === 0 ? '00' : m}${ampm}`;
-};
-
-        window.setStatusFilter = function(val) {
-            statusFilter = val;
-            const buttons = {
-                all: document.getElementById('btnFilterAll'),
-                open: document.getElementById('btnFilterOpen'),
-                booked: document.getElementById('btnFilterBooked')
-            };
-            Object.keys(buttons).forEach(k => {
-                if(buttons[k]) {
-                    buttons[k].className = (k === val) 
-                        ? "flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all status-btn-active"
-                        : "flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all status-btn-inactive";
-                }
-            });
-            window.render();
-        };
-
-        window.setView = function(v) {
-            currentView = v;
-            
-            // Toggle Content Visibility
-            document.getElementById('listView').classList.toggle('hidden', v !== 'list');
-            document.getElementById('calendarView').classList.toggle('hidden', v !== 'calendar');
-            
-            // Toggle Navigation Button Highlighting
-            const listBtn = document.getElementById('viewListBtn');
-            const calBtn = document.getElementById('viewCalendarBtn');
-            
-            if (v === 'list') {
-                listBtn.classList.replace('toggle-inactive', 'toggle-active');
-                calBtn.classList.replace('toggle-active', 'toggle-inactive');
-            } else {
-                calBtn.classList.replace('toggle-inactive', 'toggle-active');
-                listBtn.classList.replace('toggle-active', 'toggle-inactive');
-            }
-            
-            // Filter UI adjustments
-            const filters = document.getElementById('listFilters');
-            if(filters) {
-                filters.classList.toggle('opacity-20', v === 'calendar');
-                filters.style.pointerEvents = v === 'calendar' ? 'none' : 'auto';
-            }
-            
-            const weekCont = document.getElementById('weekSelectorContainer');
-            if(weekCont) weekCont.classList.toggle('hidden', v !== 'calendar');
-            
-            window.render();
-        };
-
-        function getDatesForSelectedWeek() {
-            const weekPicker = document.getElementById('weekPicker');
-            if (!weekPicker || !weekPicker.value) return null;
-            const [year, week] = weekPicker.value.split('-W');
-            const simple = new Date(year, 0, 1 + (week - 1) * 7);
-            const dow = simple.getDay();
-            const ISOweekStart = simple;
-            if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-            else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-            
-            const dates = [];
-            for(let i=0; i<7; i++) {
-                const d = new Date(ISOweekStart);
-                d.setDate(ISOweekStart.getDate() + i);
-                dates.push(d);
-            }
-            return dates;
-        }
+        window.formatTime = (t) => typeof t === 'string' ? t.toLowerCase().replace(/\s/g, '') : t;
 
         window.render = function() {
-            if(currentView === 'list') renderList();
-            else renderCalendar();
+            if (currentView === 'list') renderListView();
+            else renderCalendarView();
         };
 
-        function renderList() {
+        function renderListView() {
             const grid = document.getElementById('resultsGrid');
-            if (!grid) return;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const teacher = document.getElementById('teacherFilter').value;
+            const selectedDays = Array.from(document.getElementById('dayFilter').selectedOptions).map(o => o.value);
+            const selectedTimes = Array.from(document.getElementById('timeFilter').selectedOptions).map(o => o.value.toLowerCase());
+            const strict = document.getElementById('intersectionFilter').checked;
 
-            const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
-            const filterTeacher = document.getElementById('teacherFilter')?.value || 'ALL';
+            let filtered = masterData.filter(item => {
+                const booking = cloudBookings.find(b => 
+                    b.teacher === item.teacher && 
+                    b.day === item.day && 
+                    window.formatTime(b.time) === window.formatTime(item.time)
+                );
+                
+                const isBooked = !!booking;
+                if (statusFilter === 'open' && isBooked) return false;
+                if (statusFilter === 'booked' && !isBooked) return false;
+
+                const matchTeacher = teacher === 'ALL' || item.teacher === teacher;
+                const matchSearch = item.teacher.toLowerCase().includes(search) || 
+                                  (booking && booking.student.toLowerCase().includes(search));
+                
+                const matchDay = selectedDays.length === 0 || selectedDays.includes(item.day.substring(0,3));
+                const matchTime = selectedTimes.length === 0 || selectedTimes.includes(window.formatTime(item.time));
+
+                return strict ? (matchTeacher && matchSearch && matchDay && matchTime)
+                              : (matchTeacher && matchSearch && (matchDay || matchTime || (selectedDays.length===0 && selectedTimes.length===0)));
+            });
+
+            grid.innerHTML = filtered.map(item => {
+                const booking = cloudBookings.find(b => 
+                    b.teacher === item.teacher && 
+                    b.day === item.day && 
+                    window.formatTime(b.time) === window.formatTime(item.time)
+                );
+                return createCard(item, booking);
+            }).join('');
+        }
+
+        function createCard(item, booking) {
+            const isBooked = !!booking;
+            const typeClass = isBooked ? `type-${booking.type?.toLowerCase() || 'regular'}` : '';
             
-            const intersectionEl = document.getElementById('intersectionFilter');
-            const isIntersection = intersectionEl ? intersectionEl.checked : false;
-
-            const selDays = Array.from(document.getElementById('dayFilter')?.selectedOptions || []).map(o => o.value);
-            const selTimes = Array.from(document.getElementById('timeFilter')?.selectedOptions || []).map(o => o.value);
-
-            grid.innerHTML = '';
-
-            let allowedTeachers = null;
-            if (isIntersection && (selDays.length > 0 || selTimes.length > 0)) {
-                allowedTeachers = [...new Set(masterData.map(i => i.teacher))].filter(teacher => {
-                    const slots = masterData.filter(m => m.teacher === teacher);
-                    if (selDays.length > 0 && !selDays.every(d => slots.some(s => s.day.startsWith(d)))) return false;
-                    if (selTimes.length > 0 && !selTimes.every(tv => slots.some(s => window.formatTime(s.time) === tv))) return false;
-                    return true;
-                });
-            }
-
-            masterData.forEach(item => {
-                const displayTime = window.formatTime(item.time);
-                const baseId = `${item.teacher}_${item.day}_${displayTime}`.replace(/[^a-z0-9]/gi, '_');
-                
-                if (filterTeacher !== 'ALL' && item.teacher !== filterTeacher) return;
-                if (selDays.length > 0 && !selDays.some(d => item.day.startsWith(d))) return;
-                if (selTimes.length > 0 && !selTimes.includes(displayTime)) return;
-
-                const slotBookings = cloudBookings.filter(b => b.baseId === baseId);
-                const matchesSearch = !search || item.teacher.toLowerCase().includes(search) || slotBookings.some(b => b.student.toLowerCase().includes(search));
-                if (!matchesSearch) return;
-
-                const isOpen = slotBookings.length === 0;
-                if (statusFilter === 'open' && !isOpen) return;
-                if (statusFilter === 'booked' && isOpen) return;
-
-                if (isOpen) {
-                    const card = document.createElement('div');
-                    card.className = "p-5 rounded-3xl border border-slate-200 bg-white availability-card flex flex-col justify-between";
-                    card.innerHTML = `
+            return `
+                <div class="availability-card bg-white p-4 rounded-2xl border-slate-100 shadow-sm ${isBooked ? 'border-indigo-100' : 'border-transparent'}">
+                    <div class="flex justify-between items-start mb-3">
                         <div>
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-black text-slate-800 text-sm uppercase">${item.teacher}</h3>
-                                <span class="text-[8px] font-black px-2 py-1 rounded bg-green-50 text-green-600 uppercase">Open</span>
-                            </div>
-                            <div class="flex gap-2 mb-4">
-                                <div class="bg-slate-50 px-3 py-1.5 rounded-lg flex-1 text-center font-black text-[9px] text-slate-500">${item.day}</div>
-                                <div class="bg-indigo-50 px-3 py-1.5 rounded-lg flex-1 text-center font-black text-[9px] text-indigo-600">${displayTime}</div>
-                            </div>
+                            <h3 class="font-black text-slate-800 uppercase text-xs">${item.teacher}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">${item.subject}</p>
                         </div>
-                        <button onclick="window.openBookingModal('${baseId}', '${item.teacher}', '${item.day}', '${displayTime}')" class="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase rounded-2xl hover:bg-indigo-600 transition-all">Book</button>
-                    `;
-                    grid.appendChild(card);
-                } else {
-                    slotBookings.forEach(booked => {
-                        const card = document.createElement('div');
-                        card.className = "p-5 rounded-3xl border border-slate-800 bg-slate-900 text-white availability-card flex flex-col justify-between";
-                        card.innerHTML = `
-                            <div>
-                                <div class="flex justify-between items-start mb-4">
-                                    <h3 class="font-black text-sm uppercase">${item.teacher}</h3>
-                                    <span class="text-[8px] font-black px-2 py-1 rounded bg-indigo-600 uppercase">${booked.type}</span>
-                                </div>
-                                <div class="bg-slate-800 p-3 rounded-2xl border border-slate-700">
-                                    <p class="text-[11px] font-black uppercase text-indigo-300 leading-tight mb-1">${booked.student}</p>
-                                    <p class="text-[9px] font-black text-white/40 uppercase">${displayTime} • ${booked.date}</p>
-                                </div>
-                            </div>
-                            <button onclick="window.requestDelete('${booked.id}')" class="mt-4 w-full py-3 bg-white/10 text-white/50 text-[10px] font-black uppercase rounded-2xl hover:bg-red-500 hover:text-white transition-all">Cancel</button>
-                        `;
-                        grid.appendChild(card);
-                    });
-                }
-            });
+                        <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase ${isBooked ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}">
+                            ${isBooked ? 'Booked' : 'Available'}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-[10px] font-black px-2 py-1 bg-slate-100 rounded-md uppercase">${item.day}</span>
+                        <span class="text-[10px] font-black px-2 py-1 bg-slate-100 rounded-md uppercase">${item.time}</span>
+                    </div>
+                    ${isBooked ? `
+                        <div class="p-3 rounded-xl border-2 ${typeClass} mb-2">
+                            <p class="text-[8px] uppercase font-black opacity-60 mb-1">${booking.type || 'Regular'}</p>
+                            <p class="text-xs font-black">${booking.student}</p>
+                            <p class="text-[9px] font-bold opacity-80 mt-1">${booking.date}</p>
+                        </div>
+                        <button onclick="window.confirmDelete('${booking.id}')" class="w-full py-2 text-[9px] font-black uppercase text-red-400 hover:text-red-600 transition-colors">Cancel Booking</button>
+                    ` : `
+                        <button onclick="window.openBookingModal('${item.teacher}', '${item.day}', '${item.time}')" 
+                                class="w-full py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all">
+                            Book Slot
+                        </button>
+                    `}
+                </div>
+            `;
         }
 
-        function renderCalendar() {
+        // --- CALENDAR LOGIC ---
+        function renderCalendarView() {
+            const dates = getDatesForSelectedWeek();
+            if (!dates) return;
+
+            // Update header labels
+            document.querySelectorAll('.date-label').forEach((el, i) => {
+                el.innerText = dates[i].toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+            });
+
             const body = document.getElementById('calendarBody');
-            if (!body) return;
-
-            const teacherFilter = document.getElementById('teacherFilter')?.value || 'ALL';
-            const searchStr = (document.getElementById('searchInput')?.value || '').toLowerCase();
-            const weekDates = getDatesForSelectedWeek();
-            body.innerHTML = '';
-
-            if (!weekDates) return;
-
-            DAYS.forEach((day, idx) => {
-                const short = day.substring(0, 3);
-                const col = document.getElementById(`col-${short}`);
-                if (col) {
-                    const label = col.querySelector('.date-label');
-                    if(label) label.innerText = weekDates[idx].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                }
-            });
-
-            const rangeLabel = `${weekDates[0].toLocaleDateString()} - ${weekDates[6].toLocaleDateString()}`;
-            const rangeLabelEl = document.getElementById('calendarDateRange');
-            if(rangeLabelEl) rangeLabelEl.innerText = rangeLabel;
-
-            TIMES.forEach(time => {
-                const row = document.createElement('div');
-                row.className = "calendar-grid";
-                
-                const timeCell = document.createElement('div');
-                timeCell.className = "calendar-cell p-2 flex items-center justify-center bg-slate-50";
-                timeCell.innerHTML = `<span class="text-[9px] font-black text-slate-400 uppercase">${time}</span>`;
-                row.appendChild(timeCell);
-
-                weekDates.forEach((date, idx) => {
-                    const dayCell = document.createElement('div');
-                    dayCell.className = "calendar-cell p-1 flex flex-col gap-1 overflow-hidden";
-                    
-                    const dayShort = DAYS[idx].substring(0, 3);
-                    const isoDate = date.toISOString().split('T')[0];
-                    
-                    let cellBookings = cloudBookings.filter(b => b.date === isoDate && b.time === time);
-                    if (teacherFilter !== 'ALL') cellBookings = cellBookings.filter(b => b.teacher === teacherFilter);
-                    if (searchStr) cellBookings = cellBookings.filter(b => b.student.toLowerCase().includes(searchStr) || b.teacher.toLowerCase().includes(searchStr));
-
-                    if (statusFilter !== 'open') {
-                        cellBookings.forEach(b => {
-                            const div = document.createElement('div');
-                            let typeClass = 'type-regular';
-                            let displayContent = `<span>${b.teacher}</span> <br/> <span class="opacity-80">${b.student}</span>`;
-                            
-                            if (b.type === 'Trial') typeClass = 'type-trial';
-                            else if (b.type === 'Assessment') typeClass = 'type-assessment';
-                            else if (b.type === 'Replacement') typeClass = 'type-replacement';
-                            else if (b.type === 'Regular') {
-                                typeClass = 'type-off';
-                                displayContent = `<span class="text-[10px] opacity-40">OFF</span>`;
-                            }
-
-                            div.className = `p-1.5 rounded-lg text-[8px] font-black uppercase truncate border ${typeClass} cursor-pointer hover:scale-[1.02] transition-transform shadow-sm`;
-                            div.innerHTML = displayContent;
-                            div.onclick = () => window.requestDelete(b.id);
-                            dayCell.appendChild(div);
-                        });
-                    }
-
-                    if (statusFilter !== 'booked' && cellBookings.length === 0) {
-                         const hasMasterSlot = masterData.some(m => m.day.startsWith(dayShort) && window.formatTime(m.time) === time && (teacherFilter === 'ALL' || m.teacher === teacherFilter));
-                         if (hasMasterSlot) {
-                             const btn = document.createElement('div');
-                             btn.className = "h-4 w-full border border-dashed border-slate-200 rounded flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity cursor-pointer";
-                             btn.innerHTML = `<span class="text-[7px] text-slate-300">+</span>`;
-                             btn.onclick = () => {
-                                 const m = masterData.find(m => m.day.startsWith(dayShort) && window.formatTime(m.time) === time && (teacherFilter === 'ALL' || m.teacher === teacherFilter));
-                                 const baseId = `${m.teacher}_${m.day}_${time}`.replace(/[^a-z0-9]/gi, '_');
-                                 activeSlot = { baseId, teacher: m.teacher, day: DAYS[idx], time };
-                                 const summaryEl = document.getElementById('bookingSummary');
-                                 if(summaryEl) summaryEl.innerText = `${m.teacher} | ${DAYS[idx]} | ${time}`;
-                                 document.getElementById('bookingModal')?.classList.remove('hidden');
-                                 const dateInput = document.getElementById('bookingDateInput');
-                                 if(dateInput) dateInput.value = isoDate;
-                             };
-                             dayCell.appendChild(btn);
-                         }
-                    }
-
-                    row.appendChild(dayCell);
-                });
-                body.appendChild(row);
-            });
+            body.innerHTML = TIMES.map(time => `
+                <div class="calendar-grid border-b border-slate-50">
+                    <div class="p-2 text-[9px] font-black text-slate-400 bg-slate-50/50 flex items-center justify-center">${time}</div>
+                    ${DAYS.map(day => {
+                        const slots = masterData.filter(s => s.day === day && window.formatTime(s.time) === window.formatTime(time));
+                        return `<div class="calendar-cell p-1 flex flex-col gap-1">${slots.map(s => renderCalendarSlot(s)).join('')}</div>`;
+                    }).join('')}
+                </div>
+            `).join('');
         }
 
+        function renderCalendarSlot(slot) {
+            const booking = cloudBookings.find(b => 
+                b.teacher === slot.teacher && b.day === slot.day && window.formatTime(b.time) === window.formatTime(slot.time)
+            );
+            const isBooked = !!booking;
+            const typeClass = isBooked ? `type-${booking.type?.toLowerCase() || 'regular'}` : 'bg-slate-900 text-white';
+            
+            return `
+                <div onclick="${isBooked ? `window.confirmDelete('${booking.id}')` : `window.openBookingModal('${slot.teacher}', '${slot.day}', '${slot.time}')`}" 
+                     class="text-[8px] p-1.5 rounded-lg font-black uppercase cursor-pointer truncate shadow-sm transition-transform hover:scale-95 ${typeClass}">
+                    ${isBooked ? booking.student : slot.teacher}
+                </div>
+            `;
+        }
+
+        // --- BOOKING ACTIONS ---
         let activeSlot = null;
-        window.openBookingModal = function(baseId, teacher, day, time) {
-            activeSlot = { baseId, teacher, day, time };
-            const summaryEl = document.getElementById('bookingSummary');
-            if(summaryEl) summaryEl.innerText = `${teacher} | ${day} | ${time}`;
-            document.getElementById('bookingModal')?.classList.remove('hidden');
-            const dateInput = document.getElementById('bookingDateInput');
-            if(dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+        window.openBookingModal = (teacher, day, time) => {
+            activeSlot = { teacher, day, time };
+            document.getElementById('bookingSummary').innerText = `${teacher} | ${day} @ ${time}`;
+            document.getElementById('bookingModal').classList.remove('hidden');
         };
 
-        window.closeBookingModal = () => document.getElementById('bookingModal')?.classList.add('hidden');
+        window.closeBookingModal = () => document.getElementById('bookingModal').classList.add('hidden');
 
-        window.processBooking = async function() {
-            const student = document.getElementById('studentNameInput')?.value.trim();
-            const date = document.getElementById('bookingDateInput')?.value;
-            const type = document.getElementById('bookingTypeInput')?.value;
-            if(!student) return showToast("Enter Name", "bg-red-500");
-            const btn = document.getElementById('confirmBtn');
-            if(btn) btn.disabled = true;
-            try {
-                const docId = `bk_${Date.now()}`;
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', docId), {
-                    baseId: activeSlot.baseId, student, date, type,
-                    teacher: activeSlot.teacher, day: activeSlot.day, time: activeSlot.time,
-                    uid: currentUser?.uid || 'anon'
-                });
-                window.closeBookingModal();
-                showToast("Booking Successful!", "bg-indigo-600");
-            } catch (err) { 
-                showToast("Save Error", "bg-red-600"); 
-            }
-            finally { if(btn) btn.disabled = false; }
+        window.processBooking = async () => {
+            const student = document.getElementById('studentNameInput').value;
+            const date = document.getElementById('bookingDateInput').value;
+            const type = document.getElementById('bookingTypeInput').value;
+            
+            if (!student || !date) return alert("Fill all fields");
+
+            const bookingId = `${activeSlot.teacher}_${activeSlot.day}_${activeSlot.time}_${Date.now()}`.replace(/\s+/g, '');
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', bookingId), {
+                ...activeSlot, student, date, type, createdAt: new Date().toISOString()
+            });
+
+            showToast("Booking Successful!", "bg-emerald-500");
+            window.closeBookingModal();
         };
 
         let pendingDeleteId = null;
-        window.requestDelete = function(id) {
+        window.confirmDelete = (id) => {
             pendingDeleteId = id;
-            document.getElementById('confirmDialog')?.classList.remove('hidden');
+            document.getElementById('confirmDialog').classList.remove('hidden');
             const confirmBtn = document.getElementById('confirmActionBtn');
             if(confirmBtn) confirmBtn.onclick = window.executeDelete;
         };
 
-        window.closeConfirm = () => document.getElementById('confirmDialog')?.classList.add('hidden');
-
         window.executeDelete = async function() {
             if(!pendingDeleteId) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', pendingDeleteId));
-                showToast("Booking Cancelled", "bg-red-500");
-            } catch (err) { showToast("Error cancelling", "bg-red-600"); }
-            finally { window.closeConfirm(); }
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', pendingDeleteId));
+            showToast("Booking Cancelled", "bg-red-500");
+            document.getElementById('confirmDialog').classList.add('hidden');
         };
 
+        // --- HELPERS ---
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7);
+        }
+
+        function getDatesForSelectedWeek() {
+            const wp = document.getElementById('weekPicker').value;
+            if(!wp) return null;
+            const [y, w] = wp.split('-W');
+            const simple = new Date(y, 0, 1 + (w - 1) * 7);
+            const dow = simple.getDay();
+            const start = new Date(simple);
+            if (dow <= 4) start.setDate(simple.getDate() - simple.getDay() + 1);
+            else start.setDate(simple.getDate() + 8 - simple.getDay());
+            return Array.from({length:7}, (_,i) => {
+                const d = new Date(start); d.setDate(start.getDate()+i); return d;
+            });
+        }
+
         function showToast(msg, color) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toastMessage');
-            if(toastMsg) toastMsg.innerText = msg;
-            if(toast) {
-                toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] ${color} text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 show`;
-                setTimeout(() => toast.classList.remove('show'), 3000);
-            }
+            const t = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] ${color} text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 show`;
+            setTimeout(() => t.classList.remove('show'), 3000);
         }
 
         function updateStatus(text, color) {
@@ -670,7 +515,26 @@
             if(l) l.innerText = text; if(d) d.className = `w-2 h-2 rounded-full ${color}`;
         }
 
+        window.setStatusFilter = function(val) {
+            statusFilter = val;
+            ['all','open','booked'].forEach(k => {
+                const btn = document.getElementById('btnFilter' + k.charAt(0).toUpperCase() + k.slice(1));
+                btn.className = (k === val) ? "flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all status-btn-active" : "flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all status-btn-inactive";
+            });
+            window.render();
+        };
+
+        window.setView = function(v) {
+            currentView = v;
+            document.getElementById('listView').classList.toggle('hidden', v !== 'list');
+            document.getElementById('calendarView').classList.toggle('hidden', v !== 'calendar');
+            document.getElementById('viewListBtn').className = v === 'list' ? "px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all toggle-active" : "px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all toggle-inactive";
+            document.getElementById('viewCalendarBtn').className = v === 'calendar' ? "px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all toggle-active" : "px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all toggle-inactive";
+            window.render();
+        };
+
         init();
     </script>
+
 </body>
 </html>
