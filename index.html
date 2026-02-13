@@ -279,22 +279,29 @@
             document.getElementById('weekPicker').value = `${year}-W${String(week).padStart(2, '0')}`;
 
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                try {
                     await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
+                } catch (tokenErr) {
+                    console.warn("Auth mismatch, falling back to anonymous login...");
                     await signInAnonymously(auth);
                 }
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUser = user;
-                        setupRealtimeSync();
-                        window.fetchSheetData();
-                    }
-                });
-            } catch (err) { updateStatus("Error", "bg-red-500"); }
-        };
-
+            } else {
+                await signInAnonymously(auth);
+            }
+            
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    setupRealtimeSync();
+                    window.fetchSheetData();
+                }
+            });
+        } catch (err) { 
+            console.error("Critical Auth Error:", err);
+            updateStatus("Error", "bg-red-500"); 
+        }
+    };
         function getWeekNumber(d) {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
