@@ -241,7 +241,7 @@
           measurementId: "G-BXL181G4N0"
         };
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS_qwyBenTy0k4dl7hDOhT6cTYPG5zrVJN4WwqdwbA-eRVOF6yyB9pgj8wnCaiEmsy/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIfkL7YB5o5bxqtMGmMufC0PcsY_xJwiYc-eBRhNioruMHBcuwSL_pzZmIZvhKYRC8/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
         
         const app = initializeApp(firebaseConfig);
@@ -316,6 +316,27 @@
                 window.render();
             }, (err) => console.error("Firestore error:", err));
         }
+
+        function setupRealtimeSync() {
+        // 1. Sync Bookings (Keep your existing code)
+        const bookingsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
+        onSnapshot(bookingsRef, (snap) => {
+            cloudBookings = [];
+            snap.forEach(doc => cloudBookings.push({ ...doc.data(), id: doc.id }));
+            window.render();
+        });
+
+        // 2. NEW: Sync Teacher Availability from Google Sheets (Instant)
+        // This replaces the old window.fetchSheetData()
+        const masterDataRef = collection(db, 'artifacts', appId, 'public', 'data', 'master');
+        onSnapshot(masterDataRef, (snap) => {
+            masterData = [];
+            snap.forEach(doc => masterData.push(doc.data()));
+            updateStatus("Live", "bg-green-500");
+            populateTeachers();
+            window.render();
+        });
+    }
 
         window.fetchSheetData = async function() {
             updateStatus("Syncing", "bg-indigo-400");
