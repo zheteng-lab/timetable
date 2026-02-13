@@ -230,6 +230,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
@@ -241,18 +242,17 @@
           measurementId: "G-BXL181G4N0"
         };
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIfkL7YB5o5bxqtMGmMufC0PcsY_xJwiYc-eBRhNioruMHBcuwSL_pzZmIZvhKYRC8/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxlTyY0v3L67Jc_ZVJDaZ91kXtBLexEKW35zluFR0_LUNXQ9YE69Z8SbbLE1tqcz6P/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const rtdb = getDatabase(app);
 
         let masterData = [];
         let cloudBookings = [];
-        let currentView = 'list';
-        let currentUser = null;
-        let statusFilter = 'all'; 
+        let currentUserId = null;
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const TIMES = [];
@@ -309,16 +309,7 @@
         }
 
         function setupRealtimeSync() {
-            const bookingsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
-            onSnapshot(bookingsRef, (snap) => {
-                cloudBookings = [];
-                snap.forEach(doc => cloudBookings.push({ ...doc.data(), id: doc.id }));
-                window.render();
-            }, (err) => console.error("Firestore error:", err));
-        }
-
-        function setupRealtimeSync() {
-        // 1. Sync Bookings (Keep your existing code)
+        // 1. Keep syncing Bookings from Firestore
         const bookingsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
         onSnapshot(bookingsRef, (snap) => {
             cloudBookings = [];
@@ -326,28 +317,18 @@
             window.render();
         });
 
-        // 2. NEW: Sync Teacher Availability from Google Sheets (Instant)
-        // This replaces the old window.fetchSheetData()
-        const masterDataRef = collection(db, 'artifacts', appId, 'public', 'data', 'master');
-        onSnapshot(masterDataRef, (snap) => {
-            masterData = [];
-            snap.forEach(doc => masterData.push(doc.data()));
-            updateStatus("Live", "bg-green-500");
-            populateTeachers();
-            window.render();
+        // 2. FIXED: Sync Teacher Availability from Realtime Database (Instant)
+        const masterRef = ref(rtdb, 'master');
+        onValue(masterRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                masterData = Array.isArray(data) ? data : Object.values(data);
+                updateStatus("Live", "bg-green-500");
+                populateTeachers();
+                window.render();
+            }
         });
     }
-
-        window.fetchSheetData = async function() {
-            updateStatus("Syncing", "bg-indigo-400");
-            try {
-                const res = await fetch(SCRIPT_URL);
-                masterData = await res.json();
-                populateTeachers();
-                updateStatus("Live", "bg-green-500");
-                window.render();
-            } catch (err) { updateStatus("Fail", "bg-red-500"); }
-        };
 
         function populateTeachers() {
             const select = document.getElementById('teacherFilter');
@@ -361,8 +342,8 @@
         }
 
        window.formatTime = function(t) {
-        // If it's already a string (like "9:00am"), just return it
-        if (typeof t === 'string') return t.toLowerCase().replace(/\s/g, '');
+        return typeof t === 'string' ? t.toLowerCase().replace(/\s/g, '') : t;
+        };
         
         // Fallback for Date objects if any still exist
         const d = new Date(t);
