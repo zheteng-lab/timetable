@@ -241,7 +241,7 @@
           measurementId: "G-BXL181G4N0"
         };
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDDN9q59IapWRkpdv_Xyxx2AI40T2bUrezl36-qIOq0jO2Ivm_zqgaDri4vCls0y1w/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6Mm6KW5LjT3NP9mSSB_XgNlxRQKm9ecptBcdy5Ys3mnyJe5ZbxRKcTXsw9yVhjQ-2/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
         
         const app = initializeApp(firebaseConfig);
@@ -340,8 +340,10 @@
         }
 
        window.formatTime = function(t) {
-        // If it's already a string like "9:00 AM", just return it or normalize it
-        if (typeof t === 'string') return t.toLowerCase().replace(/\s/g, '');
+        // If it's already a string (like "9:00am"), just return it
+           if (typeof t === 'string') return t.toLowerCase().replace(/\s/g, '');
+           return t;
+        };
     
         // Fallback for Date objects
         const d = new Date(t);
@@ -452,7 +454,7 @@
             }
 
             masterData.forEach(item => {
-                const displayTime = String(item.time).toLowerCase().replace(/\s/g, '');
+                const displayTime = item.time;;
                 const baseId = `${item.teacher}_${item.day}_${displayTime}`.replace(/[^a-z0-9]/gi, '_');
                 
                 if (filterTeacher !== 'ALL' && item.teacher !== filterTeacher) return;
