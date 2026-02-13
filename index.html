@@ -230,6 +230,16 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+        apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
+        authDomain: "class-one-students-enquiry.firebaseapp.com",
+        projectId: "class-one-students-enquiry",
+        storageBucket: "class-one-students-enquiry.firebasestorage.app",
+        messagingSenderId: "808629452867",
+        appId: "1:808629452867:web:fc65ad3a56b08b258fd4f6",
+        measurementId: "G-BXL181G4N0"
+        };
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywIrTQoe2v-4kNOqX08vgstk7_X9qzz-OgN-jiHAZ4-8Mrrp_UncFALfX9hQ43oATD/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
