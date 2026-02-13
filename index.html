@@ -73,6 +73,7 @@
                             <span id="lastUpdateText" class="text-[9px] text-slate-400 italic"></span>
                         </div>
                     </div>
+                    <!-- THIS IS THE BUTTON -->
                     <button id="saveBtn" onclick="pushUpdate()" class="w-full sm:w-auto px-10 py-3 bg-indigo-600 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50">
                         PUSH TO GOOGLE SHEET
                     </button>
@@ -97,7 +98,7 @@
     </div>
 
     <script>
-        // YOUR LIVE SCRIPT URL
+        // Ensure you paste your Apps Script Web App URL here!
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyN0kqOHnUGPrLHlJhkBeXf26gViFalsv6ag-4_qy2o4kXTr9WHkgoYZfiLmE3xdMX0/exec";
 
         const teachers = [
@@ -134,7 +135,7 @@
                 renderTeacherList();
             } catch (e) {
                 console.error(e);
-                updateStatus("Sync Failed - check Script", "bg-red-500");
+                updateStatus("Sync Failed - check Script URL", "bg-red-500");
             } finally {
                 showLoading(false);
             }
@@ -148,6 +149,7 @@
             btn.disabled = true;
 
             try {
+                // We use method: 'POST' to send data to your Google Apps Script doPost(e) function
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
@@ -165,7 +167,7 @@
                     btn.innerText = originalText;
                     btn.disabled = false;
                     btn.classList.replace('bg-green-600', 'bg-indigo-600');
-                    fetchData();
+                    fetchData(); // Refresh local data from sheet
                 }, 2000);
             } catch (e) {
                 console.error(e);
@@ -183,9 +185,7 @@
 
             let count = 0;
             db.forEach(item => {
-                // Safety check to ensure schedule exists
                 if (!item || !item.schedule) return;
-
                 const meta = teachers.find(t => t.name === item.teacher);
                 if (subFilter !== 'ALL' && meta && !meta.subjects.includes(subFilter)) return;
 
@@ -242,6 +242,7 @@
         window.selectTeacher = (name) => {
             active.teacher = name;
             const record = db.find(d => d.teacher === name);
+            // Deep copy existing schedule or start new
             active.schedule = record && record.schedule ? JSON.parse(JSON.stringify(record.schedule)) : {};
             
             document.getElementById('curTeacherName').innerText = name;
