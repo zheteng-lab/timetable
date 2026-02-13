@@ -231,7 +231,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbys6yREf2ls_WsZL-fnGfAKZM1d07FeGJW3l25x9cSTEH3Yh2k-8EMxXQ4yrFh7Yh_U/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDDN9q59IapWRkpdv_Xyxx2AI40T2bUrezl36-qIOq0jO2Ivm_zqgaDri4vCls0y1w/exec";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'timetable-manager-pro-v3';
         
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -443,11 +443,10 @@
             }
 
             masterData.forEach(item => {
-                const displayTime = window.formatTime(item.time);
+                const displayTime = String(item.time).toLowerCase().replace(/\s/g, '');
                 const baseId = `${item.teacher}_${item.day}_${displayTime}`.replace(/[^a-z0-9]/gi, '_');
                 
                 if (filterTeacher !== 'ALL' && item.teacher !== filterTeacher) return;
-                if (allowedTeachers && !allowedTeachers.includes(item.teacher)) return;
                 if (selDays.length > 0 && !selDays.some(d => item.day.startsWith(d))) return;
                 if (selTimes.length > 0 && !selTimes.includes(displayTime)) return;
 
