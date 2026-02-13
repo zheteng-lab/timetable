@@ -18,19 +18,18 @@
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
 
-    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="fixed inset-0 bg-white/95 z-50 flex flex-col items-center justify-center transition-all hidden">
         <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full loading-spin mb-4"></div>
-        <p class="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Syncing with Google Sheets...</p>
+        <p class="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Communicating with Google Sheets...</p>
     </div>
 
     <div class="max-w-7xl mx-auto p-4 lg:p-6">
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div>
-                <h1 class="text-xl font-black text-slate-800 tracking-tight">Class One<span class="text-indigo-600">Timetable</span></h1>
+                <h1 class="text-xl font-black text-slate-800 tracking-tight">Staff <span class="text-indigo-600">Sync Portal</span></h1>
                 <div class="flex items-center gap-2 mt-1">
                     <span id="connDot" class="w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white shadow-sm"></span>
-                    <span id="connText" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Waiting for sync</span>
+                    <span id="connText" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Awaiting Refresh</span>
                 </div>
             </div>
             <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
@@ -39,12 +38,11 @@
             </div>
         </header>
 
-        <!-- DASHBOARD (Sales View) -->
         <main id="dashView" class="space-y-4">
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-end">
                 <div class="flex-1 min-w-[180px]">
                     <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Search Teacher / Subject</label>
-                    <input type="text" id="dashSearch" oninput="renderDashboard()" placeholder="Type to search..." class="w-full mt-1 bg-slate-50 p-2.5 rounded-xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold transition-all">
+                    <input type="text" id="dashSearch" oninput="renderDashboard()" placeholder="Filter results..." class="w-full mt-1 bg-slate-50 p-2.5 rounded-xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold transition-all">
                 </div>
                 <div class="w-40">
                     <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Target Date</label>
@@ -57,7 +55,6 @@
             <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
         </main>
 
-        <!-- ADMIN (Editor View) -->
         <main id="adminView" class="hidden flex flex-col lg:flex-row gap-6">
             <div class="w-full lg:w-72 flex flex-col gap-3">
                 <div class="bg-white p-3 rounded-xl border border-slate-200">
@@ -68,7 +65,7 @@
             
             <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col min-h-[500px] overflow-hidden">
                 <div id="welcomeScreen" class="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-300">
-                    <h3 class="font-black uppercase tracking-widest text-xs">Select a teacher to edit</h3>
+                    <h3 class="font-black uppercase tracking-widest text-xs text-slate-400">Select a staff member to edit</h3>
                 </div>
 
                 <div id="editorContent" class="hidden flex-1 flex flex-col">
@@ -77,8 +74,8 @@
                             <h2 id="curTeacherName" class="font-black text-slate-800 text-base">---</h2>
                             <p id="curTeacherSub" class="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">---</p>
                         </div>
-                        <button id="saveBtn" onclick="pushUpdate()" class="w-full sm:w-auto px-8 py-2.5 bg-indigo-600 text-white text-[11px] font-black rounded-xl shadow-lg hover:bg-indigo-700 transition-all">
-                            SYNC TO GOOGLE SHEETS
+                        <button id="saveBtn" onclick="pushUpdate()" class="w-full sm:w-auto px-8 py-2.5 bg-indigo-600 text-white text-[11px] font-black rounded-xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
+                            SYNC TO CLOUD
                         </button>
                     </div>
 
@@ -96,7 +93,7 @@
     </div>
 
     <script>
-        // Replace with your Google Apps Script Web App URL
+        // REPLACE THIS URL with your "Deployed" Web App URL
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVkKHyp0XmHkkpgGOg3hEaqPUEyy7j08AZP0wq5v2NCVND40pKf41Ew3kb-kZcRGw/exec";
 
         const teachers = [
@@ -144,28 +141,31 @@
         let cloudDb = []; 
         let currentSession = { teacher: "", schedule: {} };
 
+        // FETCH WITH NO-CACHE TO PREVENT STALE DATA
         async function fetchData() {
             showLoading(true);
             try {
-                const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
+                const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`, { cache: 'no-store' });
                 const data = await response.json();
                 cloudDb = Array.isArray(data) ? data : [];
-                updateStatus(cloudDb.length > 0 ? "Synced with Sheets" : "No data in Sheet", "bg-green-500");
+                updateStatus(cloudDb.length > 0 ? "LIVE: Connected" : "Empty Sheet", "bg-green-500");
                 renderDashboard();
                 renderTeacherList();
                 if (currentSession.teacher) selectTeacher(currentSession.teacher);
             } catch (e) {
                 console.error("Sync Error:", e);
-                updateStatus("Offline Mode", "bg-amber-500");
+                updateStatus("Offline/Sync Error", "bg-amber-500");
             } finally {
                 showLoading(false);
             }
         }
 
+        // IMPROVED PUSH WITH CORS WORKAROUND
         async function pushUpdate() {
             if (!currentSession.teacher) return;
             const btn = document.getElementById('saveBtn');
-            btn.innerText = "UPLOADING...";
+            const originalText = btn.innerText;
+            btn.innerText = "SENDING...";
             btn.disabled = true;
 
             try {
@@ -174,41 +174,45 @@
                     schedule: currentSession.schedule || {}
                 };
 
+                // Use 'no-cors' mode as Google redirects (302) fail with standard CORS
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'no-cors', 
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
-                btn.innerText = "SUCCESS! SYNCING...";
-                btn.classList.add('bg-green-600');
+                // Since 'no-cors' doesn't return status, we assume success after request completion
+                btn.innerText = "SUCCESS";
+                btn.className = "w-full sm:w-auto px-8 py-2.5 bg-green-500 text-white text-[11px] font-black rounded-xl";
                 
-                setTimeout(fetchData, 1000);
+                // Force a refresh after a small delay to let Google Sheet process
+                setTimeout(fetchData, 1500);
+                
                 setTimeout(() => {
-                    btn.innerText = "SYNC TO GOOGLE SHEETS";
+                    btn.innerText = originalText;
                     btn.disabled = false;
-                    btn.classList.remove('bg-green-600');
+                    btn.className = "w-full sm:w-auto px-8 py-2.5 bg-indigo-600 text-white text-[11px] font-black rounded-xl shadow-lg";
                 }, 3000);
             } catch (e) {
-                btn.innerText = "RETRY SYNC";
+                console.error("Post Error:", e);
+                btn.innerText = "SYNC FAILED - RETRY?";
                 btn.disabled = false;
+                btn.classList.add('bg-red-500');
             }
         }
 
         function renderDashboard() {
-            const searchInput = document.getElementById('dashSearch');
-            const search = searchInput ? searchInput.value.toLowerCase() : "";
-            const dateInput = document.getElementById('dashDate');
-            const dateVal = (dateInput && dateInput.value) || new Date().toISOString().split('T')[0];
+            const search = document.getElementById('dashSearch').value.toLowerCase();
+            const dateVal = document.getElementById('dashDate').value || new Date().toISOString().split('T')[0];
             const dayName = days[(new Date(dateVal).getDay() + 6) % 7];
             
             const grid = document.getElementById('resultsGrid');
-            if (!grid) return;
             grid.innerHTML = '';
 
             let matches = 0;
             cloudDb.forEach(item => {
-                if (!item || !item.teacher) return;
                 const meta = teachers.find(t => t.name === item.teacher);
                 if (!meta) return;
                 
@@ -222,7 +226,7 @@
                         matches++;
                         const time = key.replace(`${dayName}-`, '');
                         grid.innerHTML += `
-                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-green-400">
                                 <div class="flex justify-between items-start mb-1">
                                     <h3 class="text-[11px] font-black text-slate-800 uppercase">${item.teacher}</h3>
                                     <span class="text-[7px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded">AVAILABLE</span>
@@ -239,25 +243,23 @@
             });
 
             if (matches === 0) {
-                grid.innerHTML = `<div class="col-span-full py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">No available slots found</div>`;
+                grid.innerHTML = `<div class="col-span-full py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">No matching availability found for ${dayName}</div>`;
             }
         }
 
         function renderTeacherList() {
-            const searchInput = document.getElementById('adminSearch');
-            const search = searchInput ? searchInput.value.toLowerCase() : "";
+            const search = document.getElementById('adminSearch').value.toLowerCase();
             const list = document.getElementById('teacherList');
-            if (!list) return;
             
             list.innerHTML = teachers
                 .filter(t => t.name.toLowerCase().includes(search))
                 .map(t => {
-                    const activeClass = currentSession.teacher === t.name ? 'bg-indigo-600 text-white border-indigo-700 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-200';
-                    const synced = cloudDb.some(d => d && d.teacher === t.name);
+                    const activeClass = currentSession.teacher === t.name ? 'bg-indigo-600 text-white border-indigo-700 shadow-md scale-[1.02]' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-200';
+                    const isSynced = cloudDb.some(d => d.teacher === t.name);
                     return `
                         <button onclick="selectTeacher('${t.name}')" class="w-full flex justify-between items-center px-3 py-2.5 rounded-lg text-[10px] font-black border transition-all ${activeClass}">
                             <span>${t.name}</span>
-                            ${synced ? '<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>'}
+                            ${isSynced ? '<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>'}
                         </button>
                     `;
                 }).join('');
@@ -265,20 +267,16 @@
 
         window.selectTeacher = (name) => {
             currentSession.teacher = name;
-            const record = cloudDb.find(d => d && d.teacher === name);
+            const record = cloudDb.find(d => d.teacher === name);
             const meta = teachers.find(t => t.name === name);
             
-            const welcome = document.getElementById('welcomeScreen');
-            const editor = document.getElementById('editorContent');
-            if (welcome) welcome.classList.add('hidden');
-            if (editor) editor.classList.remove('hidden');
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('editorContent').classList.remove('hidden');
             
             currentSession.schedule = (record && record.schedule) ? record.schedule : {};
             
-            const nameEl = document.getElementById('curTeacherName');
-            const subEl = document.getElementById('curTeacherSub');
-            if (nameEl) nameEl.innerText = name;
-            if (subEl) subEl.innerText = meta ? meta.subjects.join(' / ') : "---";
+            document.getElementById('curTeacherName').innerText = name;
+            document.getElementById('curTeacherSub').innerText = meta ? meta.subjects.join(' / ') : "---";
             
             renderTeacherList();
             renderTable();
@@ -287,9 +285,8 @@
         function renderTable() {
             const head = document.getElementById('tableHead');
             const body = document.getElementById('tableBody');
-            if (!head || !body) return;
             
-            head.innerHTML = '<th class="p-2 text-[10px] font-black text-slate-400 border-b text-left">TIME</th>' + days.map(d => `<th class="p-2 text-[10px] font-black text-slate-400 border-b">${d}</th>`).join('');
+            head.innerHTML = '<th class="p-2 text-[10px] font-black text-slate-400 border-b text-left bg-white">TIME</th>' + days.map(d => `<th class="p-2 text-[10px] font-black text-slate-400 border-b">${d}</th>`).join('');
             body.innerHTML = times.map(t => `
                 <tr>
                     <td class="p-2 text-[9px] font-black text-slate-400 border-b bg-slate-50 border-r">${t}</td>
@@ -303,26 +300,21 @@
 
         window.toggle = (d, t) => {
             const key = `${d}-${t}`;
-            if (!currentSession.schedule) currentSession.schedule = {};
             const cur = currentSession.schedule[key] || 'OFF';
             currentSession.schedule[key] = cur === 'OFF' ? 'FREE' : cur === 'FREE' ? 'BOOKED' : 'OFF';
             renderTable();
         };
 
         function showLoading(s) { 
-            const loader = document.getElementById('loadingOverlay');
-            if (loader) loader.classList.toggle('hidden', !s); 
+            document.getElementById('loadingOverlay').classList.toggle('hidden', !s); 
         }
         
         function updateStatus(t, c) {
-            const textEl = document.getElementById('connText');
-            const dotEl = document.getElementById('connDot');
-            if (textEl) textEl.innerText = t;
-            if (dotEl) {
-                dotEl.className = `w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${c}`;
-                if(c === 'bg-green-500') dotEl.classList.add('sync-pulse');
-                else dotEl.classList.remove('sync-pulse');
-            }
+            document.getElementById('connText').innerText = t;
+            const dot = document.getElementById('connDot');
+            dot.className = `w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${c}`;
+            if(c === 'bg-green-500') dot.classList.add('sync-pulse');
+            else dot.classList.remove('sync-pulse');
         }
 
         document.getElementById('viewTab').onclick = () => {
@@ -341,8 +333,7 @@
         };
 
         window.onload = () => {
-            const dateInput = document.getElementById('dashDate');
-            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+            document.getElementById('dashDate').value = new Date().toISOString().split('T')[0];
             fetchData();
         };
     </script>
