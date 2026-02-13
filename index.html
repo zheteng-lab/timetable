@@ -3,137 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class One Scheduler - Live Sync</title>
+    <title>Class One Scheduler - Sync Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .slot-cell { transition: all 0.1s; cursor: pointer; border: 1px solid #f1f5f9; font-size: 10px; font-weight: bold; text-align: center; height: 38px; min-width: 80px; }
+        .slot-cell { transition: all 0.1s; cursor: pointer; border: 1px solid #f1f5f9; font-size: 10px; font-weight: bold; text-align: center; height: 34px; min-width: 70px; }
         .slot-free { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
         .slot-booked { background-color: #fef2f2; border-color: #fecaca; color: #991b1b; }
         .slot-off { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
         .loading-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .sync-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-slate-50 text-slate-900 font-sans">
 
-    <!-- Syncing Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-white/95 z-50 flex flex-col items-center justify-center transition-all">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/95 z-50 flex flex-col items-center justify-center transition-all hidden">
         <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full loading-spin mb-4"></div>
-        <p class="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Connecting to Google Cloud...</p>
+        <p class="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Google Sheets nen a in-sync mek...</p>
     </div>
 
-    <div class="max-w-7xl mx-auto p-4 lg:p-8">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div class="max-w-7xl mx-auto p-4 lg:p-6">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div>
-                <h1 class="text-2xl font-black text-slate-800 tracking-tight">Class One <span class="text-indigo-600">Scheduler</span></h1>
+                <h1 class="text-xl font-black text-slate-800 tracking-tight">Zirtirtu <span class="text-indigo-600">Sync Portal</span></h1>
                 <div class="flex items-center gap-2 mt-1">
                     <span id="connDot" class="w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white shadow-sm"></span>
-                    <span id="connText" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Awaiting Sync</span>
+                    <span id="connText" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">In-sync nghah mek</span>
                 </div>
             </div>
-            <div class="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
-                <button id="viewTab" class="px-8 py-2.5 text-xs font-black rounded-xl bg-indigo-600 text-white transition-all shadow-md shadow-indigo-200">SALES VIEW</button>
-                <button id="editTab" class="px-8 py-2.5 text-xs font-black rounded-xl text-slate-400 hover:text-indigo-600 transition-all">ADMIN PANEL</button>
+            <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                <button id="viewTab" class="px-6 py-2 text-xs font-black rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-100 transition-all">SALES VIEW</button>
+                <button id="editTab" class="px-6 py-2 text-xs font-black rounded-lg text-slate-400 hover:text-indigo-600 transition-all">ADMIN PANEL</button>
             </div>
         </header>
 
-        <!-- DASHBOARD (SALES VIEW) -->
-        <main id="dashView" class="space-y-6">
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap gap-6 items-end">
-                <div class="flex-1 min-w-[240px]">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-wider">Availability Date</label>
-                    <input type="date" id="dashDate" class="w-full mt-1.5 bg-slate-50 p-3.5 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold transition-all">
+        <!-- DASHBOARD (Sales View) -->
+        <main id="dashView" class="space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-end">
+                <div class="flex-1 min-w-[180px]">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Zirtirtu / Subject Zawnna</label>
+                    <input type="text" id="dashSearch" oninput="renderDashboard()" placeholder="Zawnna..." class="w-full mt-1 bg-slate-50 p-2.5 rounded-xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold transition-all">
                 </div>
-                <div class="flex-1 min-w-[240px]">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-wider">Filter Subject</label>
-                    <select id="dashSub" class="w-full mt-1.5 bg-slate-50 p-3.5 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold transition-all">
-                        <option value="ALL">All Subjects</option>
-                        <option>BC</option><option>BM</option><option>BI</option><option>PK</option><option>SOK</option>
-                    </select>
+                <div class="w-40">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ni (Date)</label>
+                    <input type="date" id="dashDate" onchange="renderDashboard()" class="w-full mt-1 bg-slate-50 p-2.5 rounded-xl border-none ring-1 ring-slate-200 text-xs font-bold">
                 </div>
-                <button onclick="fetchData()" class="p-4 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all group">
-                    <svg class="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <button onclick="fetchData()" class="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
+                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 </button>
             </div>
-            <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+            <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
         </main>
 
-        <!-- ADMIN PANEL -->
+        <!-- ADMIN (Editor View) -->
         <main id="adminView" class="hidden flex flex-col lg:flex-row gap-6">
-            <!-- Teacher Selector Sidebar -->
-            <div class="w-full lg:w-72 space-y-2.5 overflow-y-auto max-h-[80vh]" id="teacherList"></div>
-            
-            <!-- Matrix Container -->
-            <div class="flex-1 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                <div class="p-5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div>
-                        <h2 id="curTeacherName" class="font-black text-slate-800 text-lg">Select a teacher</h2>
-                        <div class="flex items-center gap-2">
-                            <span id="curTeacherSub" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded"></span>
-                            <span id="lastUpdateText" class="text-[9px] text-slate-400 italic"></span>
-                        </div>
-                    </div>
-                    <!-- THIS IS THE BUTTON -->
-                    <button id="saveBtn" onclick="pushUpdate()" class="w-full sm:w-auto px-10 py-3 bg-indigo-600 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50">
-                        PUSH TO GOOGLE SHEET
-                    </button>
+            <div class="w-full lg:w-72 flex flex-col gap-3">
+                <div class="bg-white p-3 rounded-xl border border-slate-200">
+                   <input type="text" id="adminSearch" oninput="renderTeacherList()" placeholder="Zirtirtu zawng rawh..." class="w-full bg-slate-50 p-2 rounded-lg border-none ring-1 ring-slate-200 text-[11px] font-bold">
                 </div>
-                
-                <div class="overflow-auto max-h-[600px]">
-                    <table class="w-full border-collapse">
-                        <thead class="sticky top-0 bg-white z-10 shadow-sm">
-                            <tr id="tableHead"></tr>
-                        </thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
+                <div class="space-y-1.5 overflow-y-auto max-h-[60vh] pr-2" id="teacherList"></div>
+            </div>
+            
+            <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col min-h-[500px] overflow-hidden">
+                <div id="welcomeScreen" class="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-300">
+                    <h3 class="font-black uppercase tracking-widest text-xs">Zirtirtu thlang rawh</h3>
                 </div>
 
-                <div class="p-4 bg-white border-t border-slate-100 flex justify-center gap-6">
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-slate-50 border border-slate-200 rounded"></div><span class="text-[9px] font-bold text-slate-400 uppercase">Off</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-50 border border-green-200 rounded"></div><span class="text-[9px] font-bold text-slate-400 uppercase">Available</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-red-50 border border-red-200 rounded"></div><span class="text-[9px] font-bold text-slate-400 uppercase">Booked</span></div>
+                <div id="editorContent" class="hidden flex-1 flex flex-col">
+                    <div class="p-4 bg-slate-50 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h2 id="curTeacherName" class="font-black text-slate-800 text-base">---</h2>
+                            <p id="curTeacherSub" class="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">---</p>
+                        </div>
+                        <button id="saveBtn" onclick="pushUpdate()" class="w-full sm:w-auto px-8 py-2.5 bg-indigo-600 text-white text-[11px] font-black rounded-xl shadow-lg hover:bg-indigo-700 transition-all">
+                            GOOGLE SHEET NEN SYNC RAWH
+                        </button>
+                    </div>
+
+                    <div class="overflow-auto max-h-[450px]">
+                        <table class="w-full">
+                            <thead class="sticky top-0 bg-white z-10 shadow-sm">
+                                <tr id="tableHead"></tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
-        // Ensure you paste your Apps Script Web App URL here!
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyN0kqOHnUGPrLHlJhkBeXf26gViFalsv6ag-4_qy2o4kXTr9WHkgoYZfiLmE3xdMX0/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVkKHyp0XmHkkpgGOg3hEaqPUEyy7j08AZP0wq5v2NCVND40pKf41Ew3kb-kZcRGw/exec";
 
         const teachers = [
-            { name: "Peggy Lok", subjects: ["BC"] },
-            { name: "Chei Leng", subjects: ["BC"] },
-            { name: "Adelynshia", subjects: ["BM", "PK"] },
-            { name: "Aubrey", subjects: ["SOK"] },
-            { name: "Avy Lau", subjects: ["BM"] },
-            { name: "Balqis", subjects: ["BM", "PK"] },
-            { name: "Catherine Mu", subjects: ["BC"] },
-            { name: "Cher Xi", subjects: ["BC"] },
-            { name: "Ho Ling Yi", subjects: ["PK"] },
-            { name: "Ho Yu Xun", subjects: ["BC"] },
-            { name: "Hoh Kar Yee", subjects: ["BM"] },
-            { name: "Jenna (Choong Lee Hung)", subjects: ["BC", "BM"] },
-            { name: "Joy (Chai Yi Ling)", subjects: ["BC"] },
-            { name: "Karen Lee", subjects: ["BC"] },
-            { name: "Kelly Chong", subjects: ["BM", "PK"] },
-            { name: "Lee Shok Yuong", subjects: ["BC"] },
-            { name: "Lee Pek Kian", subjects: ["BI"] },
-            { name: "Lim Mei King", subjects: ["BI"] },
+            { name: "Peggy (BC)", subjects: ["BC"] },
+            { name: "Chei Leng (BC)", subjects: ["BC"] },
+            { name: "Adelyneshia", subjects: ["BM", "PK"] },
+            { name: "Avy (BM&PKTT)", subjects: ["BM", "PK"] },
+            { name: "Balqis (BM&PK)", subjects: ["BM", "PK"] },
+            { name: "Catherine Mu (BC)", subjects: ["BC"] },
+            { name: "Cher Xi (BC)", subjects: ["BC"] },
+            { name: "Ho Ling Yi (PK)", subjects: ["PK"] },
+            { name: "Ho Yu Xun (BC)", subjects: ["BC"] },
+            { name: "Hoh Kar Yee (BM)", subjects: ["BM"] },
+            { name: "Jenna (BC&BM)", subjects: ["BC", "BM"] },
+            { name: "Joy (BC)", subjects: ["BC"] },
+            { name: "Karen Lee (BC)", subjects: ["BC"] },
+            { name: "Kelly Chong (BM&PK)", subjects: ["BM", "PK"] },
+            { name: "Lee Shok Yuong (BC)", subjects: ["BC"] },
+            { name: "Lee Pek Kian (BI)", subjects: ["BI"] },
+            { name: "Lim Mei King (BI)", subjects: ["BI"] },
             { name: "Lim Tze Wei (Candy)", subjects: ["BC"] },
-            { name: "Loo Eling", subjects: ["BC"] },
-            { name: "Manjusri", subjects: ["BI"] },
-            { name: "Ooi Ming Yi", subjects: ["BI", "SOK"] },
-            { name: "Sam", subjects: ["BI"] },
-            { name: "Sherrenii", subjects: ["BI"] },
-            { name: "Shirley Lim", subjects: ["BC", "BI"] },
-            { name: "Su Poh Yi", subjects: ["BC"] },
-            { name: "Susan Siew", subjects: ["BC", "BM", "PK"] },
-            { name: "Tan Jing En", subjects: ["BM"] },
-            { name: "Tan Jing Ru", subjects: ["BM"] },
-            { name: "Tan Tze Ting", subjects: ["BM", "PK"] },
-            { name: "Wendy Chee", subjects: ["BC"] },
-            { name: "Wong Kai Ling", subjects: ["BC"] }
+            { name: "Loo Eling (BC)", subjects: ["BC"] },
+            { name: "Manjusri (BI)", subjects: ["BI"] },
+            { name: "Ooi Ming Yi (BI&SOK)", subjects: ["BI", "SOK"] },
+            { name: "Sam (BI)", subjects: ["BI"] },
+            { name: "Sherrenii (BI)", subjects: ["BI"] },
+            { name: "Shirley Lim (BC&BI)", subjects: ["BC", "BI"] },
+            { name: "Su Poh Yi (BC)", subjects: ["BC"] },
+            { name: "Susan Siew (BC&BM&PK)", subjects: ["BC", "BM", "PK"] },
+            { name: "Tan Jing En (BM)", subjects: ["BM"] },
+            { name: "Tan Jing Ru (BM)", subjects: ["BM"] },
+            { name: "Tan Tze Ting (BM&PK)", subjects: ["BM", "PK"] },
+            { name: "Wendy Chee (BC)", subjects: ["BC"] },
+            { name: "Wong Kai Ling (BC)", subjects: ["BC"] }
         ];
 
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -144,94 +140,99 @@
             times.push(`${hr}:00 ${p}`, `${hr}:30 ${p}`);
         }
 
-        let db = []; 
-        let active = { teacher: "", schedule: {} };
+        let cloudDb = []; 
+        let currentSession = { teacher: "", schedule: {} };
 
         async function fetchData() {
             showLoading(true);
             try {
-                const res = await fetch(SCRIPT_URL);
-                if (!res.ok) throw new Error("Script error");
-                db = await res.json();
-                updateStatus("Cloud Sync Active", "bg-green-500");
+                const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
+                const data = await response.json();
+                cloudDb = Array.isArray(data) ? data : [];
+                updateStatus(cloudDb.length > 0 ? "Sheet nen a in-sync e" : "Sheet siam tawh a ni", "bg-green-500");
                 renderDashboard();
                 renderTeacherList();
+                if (currentSession.teacher) selectTeacher(currentSession.teacher);
             } catch (e) {
-                console.error(e);
-                updateStatus("Sync Failed - check Script URL", "bg-red-500");
+                console.error("Sync Error:", e);
+                updateStatus("Offline Mode", "bg-amber-500");
             } finally {
                 showLoading(false);
             }
         }
 
         async function pushUpdate() {
-            if (!active.teacher) return;
+            if (!currentSession.teacher) return;
             const btn = document.getElementById('saveBtn');
-            const originalText = btn.innerText;
             btn.innerText = "UPLOADING...";
             btn.disabled = true;
 
             try {
-                // We use method: 'POST' to send data to your Google Apps Script doPost(e) function
+                const payload = {
+                    teacher: currentSession.teacher,
+                    schedule: currentSession.schedule || {}
+                };
+
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    cache: 'no-cache',
-                    body: JSON.stringify({
-                        teacher: active.teacher,
-                        schedule: active.schedule
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
-                btn.innerText = "SUCCESS!";
-                btn.classList.replace('bg-indigo-600', 'bg-green-600');
+                btn.innerText = "A HLAWHTLING! SYNC MEK...";
+                btn.classList.add('bg-green-600');
                 
+                setTimeout(fetchData, 1000);
                 setTimeout(() => {
-                    btn.innerText = originalText;
+                    btn.innerText = "GOOGLE SHEET NEN SYNC RAWH";
                     btn.disabled = false;
-                    btn.classList.replace('bg-green-600', 'bg-indigo-600');
-                    fetchData(); // Refresh local data from sheet
-                }, 2000);
+                    btn.classList.remove('bg-green-600');
+                }, 3000);
             } catch (e) {
-                console.error(e);
-                btn.innerText = "ERROR - RETRY";
+                btn.innerText = "RETRY SYNC";
                 btn.disabled = false;
             }
         }
 
         function renderDashboard() {
-            const dateVal = document.getElementById('dashDate').value || new Date().toISOString().split('T')[0];
+            const searchInput = document.getElementById('dashSearch');
+            const search = searchInput ? searchInput.value.toLowerCase() : "";
+            
+            const dateInput = document.getElementById('dashDate');
+            const dateVal = (dateInput && dateInput.value) || new Date().toISOString().split('T')[0];
+            
             const dayName = days[(new Date(dateVal).getDay() + 6) % 7];
-            const subFilter = document.getElementById('dashSub').value;
             const grid = document.getElementById('resultsGrid');
+            if (!grid) return;
             grid.innerHTML = '';
 
-            let count = 0;
-            db.forEach(item => {
-                if (!item || !item.schedule) return;
+            let matches = 0;
+            cloudDb.forEach(item => {
+                if (!item || !item.teacher) return;
+                
                 const meta = teachers.find(t => t.name === item.teacher);
-                if (subFilter !== 'ALL' && meta && !meta.subjects.includes(subFilter)) return;
+                if (!meta) return;
+                
+                const subjectsText = meta.subjects.join(', ').toLowerCase();
+                const nameText = item.teacher.toLowerCase();
+                if (search && !nameText.includes(search) && !subjectsText.includes(search)) return;
 
-                times.forEach(time => {
-                    const status = item.schedule[`${dayName}-${time}`];
-                    if (status === 'FREE') {
-                        count++;
+                // FIX: Ensure item.schedule exists before calling Object.keys()
+                const schedule = item.schedule || {};
+                Object.keys(schedule).forEach(key => {
+                    if (key.startsWith(dayName) && schedule[key] === 'FREE') {
+                        matches++;
+                        const time = key.replace(`${dayName}-`, '');
                         grid.innerHTML += `
-                            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group">
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                                 <div class="flex justify-between items-start mb-1">
-                                    <h3 class="text-xs font-black text-slate-800 uppercase tracking-tight">${item.teacher}</h3>
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                        <span class="text-[8px] font-black text-green-600">LIVE</span>
-                                    </div>
+                                    <h3 class="text-[11px] font-black text-slate-800 uppercase">${item.teacher}</h3>
+                                    <span class="text-[7px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded">A AWL</span>
                                 </div>
-                                <p class="text-[10px] font-bold text-slate-400 mb-5">${meta ? meta.subjects.join(' / ') : 'TUTOR'}</p>
-                                <div class="flex justify-between items-center pt-4 border-t border-slate-50">
-                                    <div class="flex flex-col">
-                                        <span class="text-[8px] uppercase font-black text-slate-300">Available</span>
-                                        <span class="text-xs font-black text-indigo-600">${dayName}</span>
-                                    </div>
-                                    <span class="text-xs font-black text-slate-800 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">${time}</span>
+                                <p class="text-[9px] font-bold text-slate-400 mb-3">${meta.subjects.join(' / ')}</p>
+                                <div class="flex justify-between items-center pt-3 border-t border-slate-50">
+                                    <span class="text-[10px] font-black text-slate-300">${dayName}</span>
+                                    <span class="text-[11px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">${time}</span>
                                 </div>
                             </div>
                         `;
@@ -239,38 +240,48 @@
                 });
             });
 
-            if (count === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full py-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-3xl">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">No matching slots available</p>
-                    </div>
-                `;
+            if (matches === 0) {
+                grid.innerHTML = `<div class="col-span-full py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">Hun awl a awm lo</div>`;
             }
         }
 
         function renderTeacherList() {
+            const searchInput = document.getElementById('adminSearch');
+            const search = searchInput ? searchInput.value.toLowerCase() : "";
+            
             const list = document.getElementById('teacherList');
-            list.innerHTML = teachers.map(t => {
-                const isSelected = active.teacher === t.name;
-                const hasData = db.some(d => d.teacher === t.name);
-                return `
-                    <button onclick="selectTeacher('${t.name}')" class="w-full flex justify-between items-center px-5 py-4 rounded-2xl text-xs font-black border transition-all ${isSelected ? 'bg-indigo-600 text-white border-indigo-700 shadow-lg shadow-indigo-100' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300'}">
-                        <span>${t.name}</span>
-                        ${hasData ? '<span class="text-[8px] bg-white/20 px-1.5 py-0.5 rounded uppercase">Stored</span>' : ''}
-                    </button>
-                `;
-            }).join('');
+            if (!list) return;
+            
+            list.innerHTML = teachers
+                .filter(t => t.name.toLowerCase().includes(search))
+                .map(t => {
+                    const activeClass = currentSession.teacher === t.name ? 'bg-indigo-600 text-white border-indigo-700 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-200';
+                    const synced = cloudDb.some(d => d && d.teacher === t.name);
+                    return `
+                        <button onclick="selectTeacher('${t.name}')" class="w-full flex justify-between items-center px-3 py-2.5 rounded-lg text-[10px] font-black border transition-all ${activeClass}">
+                            <span>${t.name}</span>
+                            ${synced ? '<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>'}
+                        </button>
+                    `;
+                }).join('');
         }
 
         window.selectTeacher = (name) => {
-            active.teacher = name;
-            const record = db.find(d => d.teacher === name);
-            // Deep copy existing schedule or start new
-            active.schedule = record && record.schedule ? JSON.parse(JSON.stringify(record.schedule)) : {};
+            currentSession.teacher = name;
+            const record = cloudDb.find(d => d && d.teacher === name);
+            const meta = teachers.find(t => t.name === name);
             
-            document.getElementById('curTeacherName').innerText = name;
-            document.getElementById('curTeacherSub').innerText = teachers.find(t => t.name === name).subjects.join(' / ');
-            document.getElementById('lastUpdateText').innerText = record ? `Updated: ${record.lastUpdated}` : 'No cloud data';
+            const welcome = document.getElementById('welcomeScreen');
+            const editor = document.getElementById('editorContent');
+            if (welcome) welcome.classList.add('hidden');
+            if (editor) editor.classList.remove('hidden');
+            
+            currentSession.schedule = (record && record.schedule) ? record.schedule : {};
+            
+            const nameEl = document.getElementById('curTeacherName');
+            const subEl = document.getElementById('curTeacherSub');
+            if (nameEl) nameEl.innerText = name;
+            if (subEl) subEl.innerText = meta ? meta.subjects.join(' / ') : "---";
             
             renderTeacherList();
             renderTable();
@@ -279,16 +290,15 @@
         function renderTable() {
             const head = document.getElementById('tableHead');
             const body = document.getElementById('tableBody');
+            if (!head || !body) return;
             
-            head.innerHTML = '<th class="p-4 text-[10px] font-black text-slate-400 border-b text-left bg-white">TIME SLOTS</th>' + 
-                             days.map(d => `<th class="p-4 text-[10px] font-black text-slate-400 border-b">${d}</th>`).join('');
-
+            head.innerHTML = '<th class="p-2 text-[10px] font-black text-slate-400 border-b text-left">HUN</th>' + days.map(d => `<th class="p-2 text-[10px] font-black text-slate-400 border-b">${d}</th>`).join('');
             body.innerHTML = times.map(t => `
-                <tr class="hover:bg-slate-50/50 transition-colors">
-                    <td class="p-4 text-[9px] font-black text-slate-400 border-b bg-slate-50/50 border-r border-slate-100">${t}</td>
+                <tr>
+                    <td class="p-2 text-[9px] font-black text-slate-400 border-b bg-slate-50 border-r">${t}</td>
                     ${days.map(d => {
-                        const status = active.schedule[`${d}-${t}`] || 'OFF';
-                        return `<td onclick="toggle('${d}','${t}')" class="slot-cell slot-${status.toLowerCase()}">${status === 'OFF' ? '' : status}</td>`;
+                        const status = currentSession.schedule[`${d}-${t}`] || 'OFF';
+                        return `<td onclick="toggle('${d}','${t}')" class="slot-cell slot-${status.toLowerCase()}">${status === 'OFF' ? '' : status[0]}</td>`;
                     }).join('')}
                 </tr>
             `).join('');
@@ -296,45 +306,46 @@
 
         window.toggle = (d, t) => {
             const key = `${d}-${t}`;
-            const states = ['OFF', 'FREE', 'BOOKED'];
-            const cur = active.schedule[key] || 'OFF';
-            active.schedule[key] = states[(states.indexOf(cur) + 1) % 3];
+            if (!currentSession.schedule) currentSession.schedule = {};
+            const cur = currentSession.schedule[key] || 'OFF';
+            currentSession.schedule[key] = cur === 'OFF' ? 'FREE' : cur === 'FREE' ? 'BOOKED' : 'OFF';
             renderTable();
         };
 
-        function showLoading(s) { document.getElementById('loadingOverlay').classList.toggle('hidden', !s); }
+        function showLoading(s) { 
+            const loader = document.getElementById('loadingOverlay');
+            if (loader) loader.classList.toggle('hidden', !s); 
+        }
+        
         function updateStatus(t, c) {
-            document.getElementById('connText').innerText = t;
-            const dot = document.getElementById('connDot');
-            if (dot) dot.className = `w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${c}`;
+            const textEl = document.getElementById('connText');
+            const dotEl = document.getElementById('connDot');
+            if (textEl) textEl.innerText = t;
+            if (dotEl) {
+                dotEl.className = `w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${c}`;
+                if(c === 'bg-green-500') dotEl.classList.add('sync-pulse');
+                else dotEl.classList.remove('sync-pulse');
+            }
         }
 
-        const viewBtn = document.getElementById('viewTab');
-        const editBtn = document.getElementById('editTab');
-        const dashView = document.getElementById('dashView');
-        const adminView = document.getElementById('adminView');
-
-        viewBtn.onclick = () => {
-            dashView.classList.remove('hidden');
-            adminView.classList.add('hidden');
-            viewBtn.className = "px-8 py-2.5 text-xs font-black rounded-xl bg-indigo-600 text-white transition-all shadow-md shadow-indigo-200";
-            editBtn.className = "px-8 py-2.5 text-xs font-black rounded-xl text-slate-400 hover:text-indigo-600 transition-all";
+        document.getElementById('viewTab').onclick = () => {
+            document.getElementById('dashView').classList.remove('hidden');
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('viewTab').className = "px-6 py-2 text-xs font-black rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-100";
+            document.getElementById('editTab').className = "px-6 py-2 text-xs font-black rounded-lg text-slate-400 hover:text-indigo-600";
             fetchData();
         };
 
-        editBtn.onclick = () => {
-            dashView.classList.add('hidden');
-            adminView.classList.remove('hidden');
-            editBtn.className = "px-8 py-2.5 text-xs font-black rounded-xl bg-indigo-600 text-white transition-all shadow-md shadow-indigo-200";
-            viewBtn.className = "px-8 py-2.5 text-xs font-black rounded-xl text-slate-400 hover:text-indigo-600 transition-all";
-            if (!active.teacher) selectTeacher(teachers[0].name);
+        document.getElementById('editTab').onclick = () => {
+            document.getElementById('dashView').classList.add('hidden');
+            document.getElementById('adminView').classList.remove('hidden');
+            document.getElementById('editTab').className = "px-6 py-2 text-xs font-black rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-100";
+            document.getElementById('viewTab').className = "px-6 py-2 text-xs font-black rounded-lg text-slate-400 hover:text-indigo-600";
         };
 
-        document.getElementById('dashDate').onchange = renderDashboard;
-        document.getElementById('dashSub').onchange = renderDashboard;
-        
         window.onload = () => {
-            document.getElementById('dashDate').value = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('dashDate');
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
             fetchData();
         };
     </script>
