@@ -3,44 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Manager | Advanced Overview</title>
+    <title>Booking Manager | Final Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .availability-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-width: 2px; }
         .modal-overlay { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
-        
-        /* 1. FIXED TOGGLE COLORS */
-        .toggle-active { 
-            background-color: white !important; 
-            color: #4f46e5 !important; 
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-            font-weight: 900 !important;
-        }
-        .toggle-inactive { 
-            background-color: transparent !important; 
-            color: #94a3b8 !important; 
-            font-weight: 700 !important;
-        }
-
-        /* Status Buttons */
+        .toggle-active { background-color: white !important; color: #4f46e5 !important; font-weight: 900 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .toggle-inactive { background-color: transparent !important; color: #94a3b8 !important; }
         .status-btn-active { background-color: #1e293b; color: white; }
         .status-btn-inactive { background-color: white; color: #94a3b8; border: 1px solid #e2e8f0; }
-        
-        /* Multi-select styling */
-        select[multiple] { height: 100px; padding: 8px; }
-        select[multiple] option:checked { background-color: #4f46e5 !important; color: white; }
-
-        /* Calendar Styles */
-        .calendar-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); }
-        .calendar-cell { min-height: 80px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; }
-        
-        /* Booking Types */
         .type-trial { background-color: #fef9c3 !important; border-color: #facc15 !important; color: #854d0e !important; }
         .type-assessment { background-color: #fff7ed !important; border-color: #fb923c !important; color: #7c2d12 !important; }
         .type-replacement { background-color: #eff6ff !important; border-color: #60a5fa !important; color: #1e3a8a !important; }
         .type-regular { background-color: #eef2ff !important; border-color: #818cf8 !important; color: #312e81 !important; }
+        .calendar-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); }
+        .calendar-cell { min-height: 80px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
@@ -48,18 +27,15 @@
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                </div>
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black italic">C1</div>
                 <div>
                     <h1 class="text-xs font-black uppercase tracking-tight">Staff Portal</h1>
                     <div class="flex items-center gap-1">
                         <span id="statusDot" class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                        <span id="statusText" class="text-[8px] font-bold text-slate-400 uppercase">Connecting...</span>
+                        <span id="statusText" class="text-[8px] font-bold text-slate-400 uppercase">Syncing...</span>
                     </div>
                 </div>
             </div>
-
             <div class="flex bg-slate-100 p-1 rounded-xl w-64">
                 <button onclick="window.setView('list')" id="viewListBtn" class="flex-1 py-1.5 text-[10px] uppercase transition-all toggle-active">Search List</button>
                 <button onclick="window.setView('calendar')" id="viewCalendarBtn" class="flex-1 py-1.5 text-[10px] uppercase transition-all toggle-inactive">Weekly View</button>
@@ -70,63 +46,56 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6">
         <div class="bg-white rounded-3xl border border-slate-200 p-6 mb-6 shadow-sm">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                
                 <div class="space-y-4">
                     <div class="flex bg-slate-100 p-1 rounded-xl">
                         <button onclick="window.setStatusFilter('all')" id="btnFilterAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active">All</button>
                         <button onclick="window.setStatusFilter('open')" id="btnFilterOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-inactive">Open</button>
                         <button onclick="window.setStatusFilter('booked')" id="btnFilterBooked" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-inactive">Booked</button>
                     </div>
-                    
                     <div class="flex gap-2">
-                        <button onclick="window.clearAllFilters()" class="px-4 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded-xl hover:bg-slate-200">Clear</button>
+                        <button onclick="window.clearAllFilters()" class="px-4 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded-xl">Clear</button>
                         <div class="relative flex-1">
-                            <input type="text" id="searchInput" oninput="window.render()" placeholder="Search Student/Teacher..." class="w-full bg-slate-50 p-4 pl-10 rounded-2xl ring-1 ring-slate-200 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                            <svg class="w-4 h-4 text-slate-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"></path></svg>
+                            <input type="text" id="searchInput" oninput="window.render()" placeholder="Search Student/Teacher..." class="w-full bg-slate-50 p-4 pl-10 rounded-2xl ring-1 ring-slate-200 text-xs font-bold outline-none">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
                         </div>
                     </div>
                 </div>
-
                 <div class="space-y-4">
-                    <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl ring-1 ring-slate-200 text-xs font-bold">
+                    <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl ring-1 ring-slate-200 text-xs font-bold outline-none">
                         <option value="ALL">All Teachers</option>
                     </select>
-
                     <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-200">
-                        <button onclick="window.changeWeek(-1)" class="p-3 hover:bg-white rounded-xl text-indigo-600 transition-all">
+                        <button onclick="window.changeWeek(-1)" class="p-3 text-indigo-600 hover:bg-white rounded-xl transition-all">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="3"></path></svg>
                         </button>
                         <input type="week" id="weekPicker" onchange="window.render()" class="flex-1 bg-transparent text-center font-black text-[10px] uppercase outline-none">
-                        <button onclick="window.changeWeek(1)" class="p-3 hover:bg-white rounded-xl text-indigo-600 transition-all">
+                        <button onclick="window.changeWeek(1)" class="p-3 text-indigo-600 hover:bg-white rounded-xl transition-all">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="3"></path></svg>
                         </button>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-4">
-                    <select id="dayFilter" multiple onchange="window.render()" class="bg-slate-50 rounded-2xl ring-1 ring-slate-200 text-[10px] font-bold">
-                        <option value="Mon">Monday</option><option value="Tue">Tuesday</option><option value="Wed">Wednesday</option>
-                        <option value="Thu">Thursday</option><option value="Fri">Friday</option><option value="Sat">Saturday</option><option value="Sun">Sunday</option>
+                    <select id="dayFilter" multiple onchange="window.render()" class="bg-slate-50 rounded-2xl ring-1 ring-slate-200 text-[10px] font-bold p-2">
+                        <option value="Mon">Mon</option><option value="Tue">Tue</option><option value="Wed">Wed</option><option value="Thu">Thu</option><option value="Fri">Fri</option><option value="Sat">Sat</option><option value="Sun">Sun</option>
                     </select>
-                    <select id="timeFilter" multiple onchange="window.render()" class="bg-slate-50 rounded-2xl ring-1 ring-slate-200 text-[10px] font-bold"></select>
+                    <select id="timeFilter" multiple onchange="window.render()" class="bg-slate-50 rounded-2xl ring-1 ring-slate-200 text-[10px] font-bold p-2"></select>
                 </div>
             </div>
         </div>
 
-        <div id="listView">
-            <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-        </div>
-
+        <div id="listView"><div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div></div>
         <div id="calendarView" class="hidden">
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-x-auto">
                 <div class="min-w-[1000px]">
                     <div class="calendar-grid bg-slate-50/50 border-b border-slate-200">
                         <div class="p-4"></div>
-                        <script>
-                            ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(d => {
-                                document.write(`<div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">${d}</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>`);
-                            });
-                        </script>
+                        <div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">Mon</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
+                        <div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">Tue</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
+                        <div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">Wed</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
+                        <div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">Thu</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
+                        <div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">Fri</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
+                        <div class="p-4 text-center border-r border-slate-100"><p class="text-[10px] font-black uppercase text-slate-400">Sat</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
+                        <div class="p-4 text-center"><p class="text-[10px] font-black uppercase text-slate-400">Sun</p><p class="date-label text-[9px] font-bold text-slate-500"></p></div>
                     </div>
                     <div id="calendarBody"></div>
                 </div>
@@ -139,18 +108,31 @@
         <div class="bg-white rounded-3xl p-8 w-full max-w-sm relative z-10 shadow-2xl">
             <h2 class="text-xl font-black uppercase mb-1">Book Slot</h2>
             <p id="bookingSummary" class="text-[10px] font-bold text-slate-400 uppercase mb-6"></p>
-            <input type="text" id="studentNameInput" placeholder="Student Name" class="w-full bg-slate-100 p-4 rounded-2xl font-bold mb-4 outline-none focus:ring-2 ring-indigo-500">
-            <select id="bookingTypeInput" class="w-full bg-slate-100 p-4 rounded-2xl font-bold mb-6 outline-none">
-                <option value="Regular">Regular</option><option value="Trial">Trial</option><option value="Assessment">Assessment</option><option value="Replacement">Replacement</option>
-            </select>
-            <button onclick="window.processBooking()" class="w-full py-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-widest">Confirm Booking</button>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 ml-1">Student Name</label>
+                    <input type="text" id="studentNameInput" class="w-full bg-slate-100 p-4 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 ml-1">Booking Date</label>
+                    <input type="date" id="bookingDateInput" class="w-full bg-slate-100 p-4 rounded-2xl font-bold outline-none">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 ml-1">Type</label>
+                    <select id="bookingTypeInput" class="w-full bg-slate-100 p-4 rounded-2xl font-bold outline-none">
+                        <option value="Regular">Regular</option><option value="Trial">Trial</option><option value="Assessment">Assessment</option><option value="Replacement">Replacement</option>
+                    </select>
+                </div>
+                <button onclick="window.processBooking()" class="w-full py-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-widest mt-4">Confirm Booking</button>
+            </div>
         </div>
     </div>
 
     <div id="confirmDialog" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="modal-overlay absolute inset-0" onclick="window.closeConfirm()"></div>
         <div class="bg-white rounded-3xl p-8 w-full max-w-xs relative z-10 text-center shadow-2xl">
-            <h3 class="text-lg font-black uppercase mb-2">Cancel?</h3>
+            <h3 class="text-lg font-black uppercase mb-2">Cancel Booking?</h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase">This cannot be undone.</p>
             <div class="flex gap-3 mt-6">
                 <button id="confirmActionBtn" class="flex-1 py-3 bg-red-500 text-white text-[10px] font-black rounded-xl uppercase">Yes, Cancel</button>
                 <button onclick="window.closeConfirm()" class="flex-1 py-3 bg-slate-100 text-slate-400 text-[10px] font-black rounded-xl uppercase">No</button>
@@ -158,10 +140,8 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] pointer-events-none opacity-0 transition-all duration-300">
-        <div id="toastBg" class="px-6 py-3 rounded-2xl shadow-xl text-white text-[10px] font-black uppercase tracking-widest">
-            <span id="toastMessage"></span>
-        </div>
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toastBg" class="px-6 py-3 rounded-2xl shadow-xl text-white text-[10px] font-black uppercase"><span id="toastMessage"></span></div>
     </div>
 
     <script type="module">
@@ -186,44 +166,24 @@
         const rtdb = getDatabase(app);
         const appId = 'timetable-manager-pro-v3';
 
-        let masterData = [];
-        let cloudBookings = [];
-        let currentView = 'list';
-        let statusFilter = 'all';
+        let masterData = [], cloudBookings = [], currentView = 'list', statusFilter = 'all';
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const TIMES = [];
-        for(let h=8; h<=21; h++){ 
-            for(let m of ['00','30']){
-                const ampm = h >= 12 ? 'pm' : 'am';
-                const h12 = h % 12 || 12;
-                TIMES.push(`${h12}:${m}${ampm}`);
-            }
-        }
+        for(let h=8; h<=21; h++){ for(let m of ['00','30']){ const ampm = h >= 12 ? 'pm' : 'am'; const h12 = h % 12 || 12; TIMES.push(`${h12}:${m}${ampm}`); } }
 
         async function init() {
             const timeFilter = document.getElementById('timeFilter');
-            TIMES.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t; opt.text = t; timeFilter.appendChild(opt);
-            });
-
+            TIMES.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.text = t; timeFilter.appendChild(opt); });
             const now = new Date();
-            const year = now.getFullYear();
-            const week = getWeekNumber(now);
-            document.getElementById('weekPicker').value = `${year}-W${String(week).padStart(2, '0')}`;
-
-            try {
-                await signInAnonymously(auth);
-                setupRealtimeSync();
-            } catch (err) { updateStatus("Auth Error", "bg-red-500"); }
+            document.getElementById('weekPicker').value = `${now.getFullYear()}-W${String(getWeekNumber(now)).padStart(2, '0')}`;
+            try { await signInAnonymously(auth); setupSync(); } catch (err) { updateStatus("Error", "bg-red-500"); }
         }
 
-        function setupRealtimeSync() {
+        function setupSync() {
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bookings'), (snap) => {
                 cloudBookings = snap.docs.map(d => ({ ...d.data(), id: d.id }));
                 window.render();
             });
-
             onValue(ref(rtdb, 'master'), (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
@@ -235,58 +195,35 @@
             });
         }
 
-        window.changeWeek = (offset) => {
-            const picker = document.getElementById('weekPicker');
-            const [y, w] = picker.value.split('-W').map(Number);
-            let date = new Date(y, 0, 1 + (w - 1) * 7);
-            date.setDate(date.getDate() + (offset * 7));
-            const newWeek = getWeekNumber(date);
-            picker.value = `${date.getFullYear()}-W${String(newWeek).padStart(2, '0')}`;
-            window.render();
-        };
-
-        window.setView = (v) => {
-            currentView = v;
-            document.getElementById('listView').classList.toggle('hidden', v !== 'list');
-            document.getElementById('calendarView').classList.toggle('hidden', v !== 'calendar');
-            document.getElementById('viewListBtn').className = `flex-1 py-1.5 text-[10px] uppercase transition-all ${v === 'list' ? 'toggle-active' : 'toggle-inactive'}`;
-            document.getElementById('viewCalendarBtn').className = `flex-1 py-1.5 text-[10px] uppercase transition-all ${v === 'calendar' ? 'toggle-active' : 'toggle-inactive'}`;
-            window.render();
-        };
-
         window.render = () => {
-            if (currentView === 'list') renderListView();
-            else renderCalendarView();
+            const dates = getDatesForSelectedWeek();
+            document.querySelectorAll('.date-label').forEach((el, i) => { el.innerText = dates[i].toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); });
+            if (currentView === 'list') renderListView(dates);
+            else renderCalendarView(dates);
         };
 
-        function renderListView() {
+        function renderListView(weekDates) {
             const grid = document.getElementById('resultsGrid');
             const search = document.getElementById('searchInput').value.toLowerCase();
             const teacher = document.getElementById('teacherFilter').value;
-            const selectedDays = Array.from(document.getElementById('dayFilter').selectedOptions).map(o => o.value);
-            const selectedTimes = Array.from(document.getElementById('timeFilter').selectedOptions).map(o => o.value.toLowerCase());
+            const selDays = Array.from(document.getElementById('dayFilter').selectedOptions).map(o => o.value);
+            const selTimes = Array.from(document.getElementById('timeFilter').selectedOptions).map(o => o.value.toLowerCase());
 
             let filtered = masterData.filter(item => {
-                const targetDate = getDateFromDayName(item.day);
-                const booking = cloudBookings.find(b => 
-                    b.teacher === item.teacher && b.day === item.day && 
-                    window.formatTime(b.time) === window.formatTime(item.time) && b.date === targetDate
-                );
-                
+                const date = getDateString(item.day, weekDates);
+                const booking = cloudBookings.find(b => b.teacher === item.teacher && b.time.replace(/\s/g,'').toLowerCase() === item.time.replace(/\s/g,'').toLowerCase() && b.date === date);
                 if (statusFilter === 'open' && booking) return false;
                 if (statusFilter === 'booked' && !booking) return false;
-
                 const matchTeacher = teacher === 'ALL' || item.teacher === teacher;
                 const matchSearch = item.teacher.toLowerCase().includes(search) || (booking && booking.student.toLowerCase().includes(search));
-                const matchDay = selectedDays.length === 0 || selectedDays.includes(item.day.substring(0,3));
-                const matchTime = selectedTimes.length === 0 || selectedTimes.includes(window.formatTime(item.time));
-
+                const matchDay = selDays.length === 0 || selDays.includes(item.day.substring(0,3));
+                const matchTime = selTimes.length === 0 || selTimes.includes(item.time.replace(/\s/g,'').toLowerCase());
                 return matchTeacher && matchSearch && matchDay && matchTime;
             });
 
             grid.innerHTML = filtered.map(item => {
-                const date = getDateFromDayName(item.day);
-                const booking = cloudBookings.find(b => b.teacher === item.teacher && b.day === item.day && window.formatTime(b.time) === window.formatTime(item.time) && b.date === date);
+                const date = getDateString(item.day, weekDates);
+                const booking = cloudBookings.find(b => b.teacher === item.teacher && b.time.replace(/\s/g,'').toLowerCase() === item.time.replace(/\s/g,'').toLowerCase() && b.date === date);
                 return createCard(item, booking, date);
             }).join('');
         }
@@ -296,51 +233,99 @@
             return `
                 <div class="availability-card bg-white p-4 rounded-2xl border-slate-100 ${isBooked ? 'border-indigo-100' : ''}">
                     <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <p class="text-[10px] font-black uppercase text-slate-800">${item.teacher}</p>
-                            <p class="text-[8px] font-bold text-slate-400 uppercase">${item.subject}</p>
-                        </div>
+                        <div><p class="text-[10px] font-black uppercase">${item.teacher}</p><p class="text-[8px] font-bold text-slate-400 uppercase">${item.subject}</p></div>
                         <span class="text-[8px] font-black uppercase px-2 py-1 rounded-md ${isBooked ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}">${isBooked ? 'Booked' : 'Free'}</span>
                     </div>
-                    <div class="text-[8px] font-bold bg-slate-50 p-2 rounded-lg mb-4 text-slate-500 uppercase">${item.day} @ ${item.time} (${date})</div>
+                    <div class="text-[8px] font-bold bg-slate-50 p-2 rounded-lg mb-4 text-slate-500 uppercase">${item.day} @ ${item.time}</div>
+                    <div class="text-[8px] font-black text-slate-300 mb-4 uppercase">Date: ${date}</div>
                     ${isBooked ? `
                         <div class="p-3 rounded-xl border-2 type-${booking.type?.toLowerCase()} mb-2"><p class="text-[10px] font-black uppercase">${booking.student}</p></div>
-                        <button onclick="window.confirmDelete('${booking.id}')" class="w-full text-[9px] font-black uppercase text-red-400 py-1">Cancel</button>
+                        <button onclick="window.confirmDelete('${booking.id}')" class="w-full text-[9px] font-black uppercase text-red-400 py-1 hover:text-red-600">Cancel Booking</button>
                     ` : `
-                        <button onclick="window.openBookingModal('${item.teacher}', '${item.day}', '${item.time}', '${date}')" class="w-full py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase">Book</button>
+                        <button onclick="window.openBookingModal('${item.teacher}', '${item.day}', '${item.time}', '${date}')" class="w-full py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600">Book Slot</button>
                     `}
                 </div>`;
         }
 
-        function renderCalendarView() {
-            const dates = getDatesForSelectedWeek();
-            document.querySelectorAll('.date-label').forEach((el, i) => { el.innerText = dates[i].toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); });
-            
+        function renderCalendarView(weekDates) {
             const body = document.getElementById('calendarBody');
             body.innerHTML = TIMES.map(time => `
                 <div class="calendar-grid border-b border-slate-50">
                     <div class="p-2 text-[8px] font-black text-slate-300 bg-slate-50/30 flex items-center justify-center">${time}</div>
                     ${DAYS.map(day => {
-                        const targetDate = getDateFromDayName(day);
-                        const slots = masterData.filter(s => s.day === day && window.formatTime(s.time) === window.formatTime(time));
-                        return `<div class="calendar-cell p-1 flex flex-col gap-1">${slots.map(s => renderCalendarSlot(s, targetDate)).join('')}</div>`;
+                        const date = getDateString(day, weekDates);
+                        const slots = masterData.filter(s => s.day === day && s.time.replace(/\s/g,'').toLowerCase() === time.replace(/\s/g,'').toLowerCase());
+                        return `<div class="calendar-cell p-1 flex flex-col gap-1">${slots.map(s => {
+                            const b = cloudBookings.find(bk => bk.teacher === s.teacher && bk.time.replace(/\s/g,'').toLowerCase() === s.time.replace(/\s/g,'').toLowerCase() && bk.date === date);
+                            return `<div onclick="${b ? `window.confirmDelete('${b.id}')` : `window.openBookingModal('${s.teacher}', '${s.day}', '${s.time}', '${date}')`}" 
+                                class="text-[8px] p-1.5 rounded-lg font-black uppercase truncate cursor-pointer shadow-sm ${b ? `type-${b.type?.toLowerCase()} border` : 'bg-slate-900 text-white'}">${b ? b.student : s.teacher}</div>`;
+                        }).join('')}</div>`;
                     }).join('')}
                 </div>`).join('');
         }
 
-        function renderCalendarSlot(slot, date) {
-            const booking = cloudBookings.find(b => b.teacher === slot.teacher && b.day === slot.day && window.formatTime(b.time) === window.formatTime(slot.time) && b.date === date);
-            return `<div onclick="${!!booking ? `window.confirmDelete('${booking.id}')` : `window.openBookingModal('${slot.teacher}', '${slot.day}', '${slot.time}', '${date}')`}" 
-                    class="text-[8px] p-1.5 rounded-lg font-black uppercase truncate cursor-pointer shadow-sm ${!!booking ? `type-${booking.type?.toLowerCase()} border` : 'bg-slate-900 text-white'}">${!!booking ? booking.student : slot.teacher}</div>`;
-        }
+        window.openBookingModal = (teacher, day, time, date) => {
+            window.activeSlot = { teacher, day, time };
+            document.getElementById('bookingSummary').innerText = `${teacher} | ${day} @ ${time}`;
+            document.getElementById('studentNameInput').value = '';
+            document.getElementById('bookingDateInput').value = date;
+            document.getElementById('bookingModal').classList.remove('hidden');
+        };
 
-        // HELPERS
-        function getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-            return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7);
-        }
+        window.processBooking = async () => {
+            const student = document.getElementById('studentNameInput').value;
+            const date = document.getElementById('bookingDateInput').value;
+            const type = document.getElementById('bookingTypeInput').value;
+            if (!student || !date) return alert("Missing Info");
+            const id = `${window.activeSlot.teacher}_${date}_${window.activeSlot.time}`.replace(/[^a-zA-Z0-9]/g, '');
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { ...window.activeSlot, student, date, type, createdAt: new Date().toISOString() });
+            window.closeBookingModal();
+            showToast("Booked Successfully", "bg-emerald-500");
+        };
 
+        window.confirmDelete = (id) => {
+            document.getElementById('confirmDialog').classList.remove('hidden');
+            document.getElementById('confirmActionBtn').onclick = async () => {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id));
+                window.closeConfirm();
+                showToast("Booking Removed", "bg-red-500");
+            };
+        };
+
+        // UI HELPERS
+        window.setView = (v) => {
+            currentView = v;
+            document.getElementById('listView').classList.toggle('hidden', v !== 'list');
+            document.getElementById('calendarView').classList.toggle('hidden', v !== 'calendar');
+            document.getElementById('viewListBtn').className = `flex-1 py-1.5 text-[10px] uppercase transition-all ${v === 'list' ? 'toggle-active' : 'toggle-inactive'}`;
+            document.getElementById('viewCalendarBtn').className = `flex-1 py-1.5 text-[10px] uppercase transition-all ${v === 'calendar' ? 'toggle-active' : 'toggle-inactive'}`;
+            window.render();
+        };
+        window.changeWeek = (offset) => {
+            const p = document.getElementById('weekPicker');
+            const [y, w] = p.value.split('-W').map(Number);
+            let d = new Date(y, 0, 1 + (w - 1) * 7);
+            d.setDate(d.getDate() + (offset * 7));
+            p.value = `${d.getFullYear()}-W${String(getWeekNumber(d)).padStart(2, '0')}`;
+            window.render();
+        };
+        window.setStatusFilter = (val) => {
+            statusFilter = val;
+            ['All','Open','Booked'].forEach(k => document.getElementById('btnFilter'+k).className = `flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${k.toLowerCase() === val ? 'status-btn-active' : 'status-btn-inactive'}`);
+            window.render();
+        };
+        window.clearAllFilters = () => {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('teacherFilter').value = 'ALL';
+            document.getElementById('dayFilter').selectedIndex = -1;
+            document.getElementById('timeFilter').selectedIndex = -1;
+            window.setStatusFilter('all');
+        };
+        window.closeBookingModal = () => document.getElementById('bookingModal').classList.add('hidden');
+        window.closeConfirm = () => document.getElementById('confirmDialog').classList.add('hidden');
+        
+        // LOGIC HELPERS
+        function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7); }
         function getDatesForSelectedWeek() {
             const wp = document.getElementById('weekPicker').value;
             const [y, w] = wp.split('-W').map(Number);
@@ -351,69 +336,21 @@
             else start.setDate(simple.getDate() + 8 - simple.getDay());
             return Array.from({length:7}, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return d; });
         }
-
-        function getDateFromDayName(dayName) {
-            const weekDates = getDatesForSelectedWeek();
-            const dayIdx = DAYS.indexOf(dayName);
-            return (dayIdx === -1 || !weekDates) ? null : weekDates[dayIdx].toISOString().split('T')[0];
+        function getDateString(dayName, weekDates) {
+            const idx = DAYS.indexOf(dayName);
+            return idx === -1 ? null : weekDates[idx].toISOString().split('T')[0];
         }
-
-        window.clearAllFilters = () => {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('teacherFilter').value = 'ALL';
-            document.getElementById('dayFilter').selectedIndex = -1;
-            document.getElementById('timeFilter').selectedIndex = -1;
-            window.setStatusFilter('all');
-        };
-
-        window.openBookingModal = (teacher, day, time, date) => {
-            window.activeSlot = { teacher, day, time, date };
-            document.getElementById('bookingSummary').innerText = `${teacher} | ${day} (${date}) @ ${time}`;
-            document.getElementById('studentNameInput').value = '';
-            document.getElementById('bookingModal').classList.remove('hidden');
-        };
-
-        window.processBooking = async () => {
-            const student = document.getElementById('studentNameInput').value;
-            const type = document.getElementById('bookingTypeInput').value;
-            if (!student) return alert("Enter Student Name");
-            const id = `${window.activeSlot.teacher}_${window.activeSlot.date}_${window.activeSlot.time}`.replace(/[^a-zA-Z0-9]/g, '');
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { ...window.activeSlot, student, type, createdAt: new Date().toISOString() });
-            window.closeBookingModal();
-            showToast("Booked!", "bg-emerald-500");
-        };
-
-        window.confirmDelete = (id) => {
-            document.getElementById('confirmDialog').classList.remove('hidden');
-            document.getElementById('confirmActionBtn').onclick = async () => {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id));
-                window.closeConfirm();
-                showToast("Deleted", "bg-red-500");
-            };
-        };
-
-        function populateTeachers() {
-            const select = document.getElementById('teacherFilter');
-            const teachers = [...new Set(masterData.map(i => i.teacher))].filter(Boolean).sort();
-            select.innerHTML = '<option value="ALL">All Teachers</option>' + teachers.map(t => `<option value="${t}">${t}</option>`).join('');
-        }
-
-        window.formatTime = (t) => typeof t === 'string' ? t.toLowerCase().replace(/\s/g, '') : t;
-        window.closeBookingModal = () => document.getElementById('bookingModal').classList.add('hidden');
-        window.closeConfirm = () => document.getElementById('confirmDialog').classList.add('hidden');
-        window.setStatusFilter = (val) => {
-            statusFilter = val;
-            ['All','Open','Booked'].forEach(k => document.getElementById('btnFilter'+k).className = `flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${k.toLowerCase() === val ? 'status-btn-active' : 'status-btn-inactive'}`);
-            window.render();
-        };
-
         function updateStatus(t, c) { document.getElementById('statusText').innerText = t; document.getElementById('statusDot').className = `w-1.5 h-1.5 rounded-full ${c}`; }
+        function populateTeachers() {
+            const s = document.getElementById('teacherFilter');
+            const t = [...new Set(masterData.map(i => i.teacher))].filter(Boolean).sort();
+            s.innerHTML = '<option value="ALL">All Teachers</option>' + t.map(n => `<option value="${n}">${n}</option>`).join('');
+        }
         function showToast(m, c) { 
             const t = document.getElementById('toast');
-            document.getElementById('toastBg').className = `px-6 py-3 rounded-2xl shadow-xl text-white text-[10px] font-black uppercase tracking-widest ${c}`;
+            document.getElementById('toastBg').className = `px-6 py-3 rounded-2xl shadow-xl text-white text-[10px] font-black uppercase ${c}`;
             document.getElementById('toastMessage').innerText = m; 
-            t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 3000);
+            t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 3000);
         }
 
         init();
