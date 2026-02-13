@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class One Scheduler - Live</title>
+    <title>Timetable Manager - Date Range Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .slot-cell { transition: all 0.1s; cursor: pointer; border: 1px solid #f1f5f9; font-size: 10px; font-weight: bold; text-align: center; height: 40px; min-width: 80px; }
@@ -12,10 +12,6 @@
         .slot-off { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
         .sidebar-active { background-color: #4f46e5; color: white; border-color: #4338ca; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        
-        /* Loading animation for data sync */
-        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .syncing { animation: pulse-soft 2s infinite; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
@@ -24,8 +20,8 @@
     <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center transition-opacity duration-500">
         <div class="text-center p-6">
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <h2 class="text-base font-bold text-slate-800 mb-1">Connecting to Master Database</h2>
-            <p class="text-slate-400 text-xs">Linking Google Sheets & Firebase...</p>
+            <h2 class="text-base font-bold text-slate-800 mb-1">Accessing Master Database</h2>
+            <p class="text-slate-400 text-xs">Loading live schedules...</p>
         </div>
     </div>
 
@@ -33,7 +29,7 @@
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Class One <span class="text-indigo-600">Scheduler</span></h1>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Live Integration Active</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Master List System</p>
             </div>
             <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
                 <button id="viewBtn" class="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md transition-all">Sales View</button>
@@ -46,33 +42,29 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 shadow-sm">
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-slate-400 uppercase">Check Availability For</label>
-                    <input type="date" id="dashDate" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500">
+                    <input type="date" id="dashDate" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500" onchange="renderDashboard()">
                 </div>
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-slate-400 uppercase">Filter Subject</label>
-                    <select id="filterSubject" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500">
+                    <select id="filterSubject" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500" onchange="renderDashboard()">
                         <option value="All">All Subjects</option>
                         <option>BC</option><option>BM</option><option>BI</option><option>PK</option><option>SOK</option>
                     </select>
                 </div>
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-slate-400 uppercase">Filter Day</label>
-                    <select id="filterDay" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500">
+                    <select id="filterDay" class="w-full bg-slate-50 p-2.5 rounded-xl border-none text-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500" onchange="renderDashboard()">
                         <option value="All">All Days</option>
                         <option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option>
                     </select>
                 </div>
                 <div class="flex flex-col items-end justify-center">
-                    <div id="sheetStatus" class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-[9px] font-black text-slate-500 flex items-center gap-2">
-                         Connecting Sheets...
+                    <div id="sheetStatus" class="px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 flex items-center gap-2">
+                         Connecting to Sheets...
                     </div>
-                    <div id="dbStatus" class="mt-1 text-[8px] font-bold text-slate-400 uppercase">Database: Synchronizing</div>
                 </div>
             </div>
-            
-            <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <!-- Data populated via JS -->
-            </div>
+            <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
         </div>
 
         <!-- EDITOR SECTION (Admin) -->
@@ -89,14 +81,14 @@
                     <div class="flex flex-wrap items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                         <div class="flex flex-col">
                             <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
-                            <input type="date" id="startDate" class="text-xs p-1.5 rounded border border-slate-200">
+                            <input type="date" id="startDate" class="text-xs p-1.5 rounded border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" onchange="fetchRangeData()">
                         </div>
                         <div class="flex flex-col">
                             <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">End Date</label>
-                            <input type="date" id="endDate" class="text-xs p-1.5 rounded border border-slate-200">
+                            <input type="date" id="endDate" class="text-xs p-1.5 rounded border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" onchange="fetchRangeData()">
                         </div>
                         <div class="flex items-center self-end">
-                            <div id="syncIndicator" class="text-[9px] font-black text-slate-400 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 uppercase">Local Cache Only</div>
+                            <div id="syncIndicator" class="text-[9px] font-black text-slate-400 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 uppercase">Syncing...</div>
                         </div>
                     </div>
                 </div>
@@ -115,13 +107,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // ==========================================
-        // INTEGRATED GOOGLE SCRIPT URL
-        // ==========================================
-        const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyk-ncHlPyw-eIyYy2E4UCHC1uLr_tM73Q0ml2TlGjyHi77NxVlMk-waGv64D_nPD3z/exec";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
@@ -175,81 +162,67 @@
         
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const times = [];
-        for (let h = 8; h <= 21; h++) {
+        for (let h = 9; h <= 21; h++) {
             const p = h >= 12 ? 'PM' : 'AM';
-            const hr = h > 12 ? h - 12 : h === 0 ? 12 : h;
+            const hr = h > 12 ? h - 12 : h;
             times.push(`${hr}:00 ${p}`, `${hr}:30 ${p}`);
         }
 
-        let allSchedules = []; 
+        // State
+        let allSchedules = []; // Array of {teacher, start, end, schedule}
         let currentRangeData = { schedule: {} };
         let activeTeacherName = teacherMetadata[0].name;
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        document.getElementById('dashDate').value = todayStr;
-        document.getElementById('startDate').value = todayStr;
-        const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
-        document.getElementById('endDate').value = nextWeek.toISOString().split('T')[0];
+        // Init dates
+        const now = new Date();
+        const firstDay = new Date(now.setDate(now.getDate() - now.getDay() + 1)).toISOString().split('T')[0];
+        const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 7)).toISOString().split('T')[0];
+        
+        document.getElementById('startDate').value = firstDay;
+        document.getElementById('endDate').value = lastDay;
+        document.getElementById('dashDate').value = new Date().toISOString().split('T')[0];
 
         async function init() {
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    document.getElementById('dbStatus').innerText = "Firebase: Online";
-                    setupListeners();
-                } else {
-                    signInAnonymously(auth);
-                }
-            });
+            try {
+                await signInAnonymously(auth);
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'ranges');
+                
+                onSnapshot(colRef, (snap) => {
+                    allSchedules = [];
+                    snap.forEach(doc => {
+                        allSchedules.push({ id: doc.id, ...doc.data() });
+                    });
+                    document.getElementById('loading').classList.add('hidden');
+                    renderSidebar();
+                    renderDashboard();
+                });
+
+                fetchRangeData();
+                syncFromGoogleSheets();
+            } catch (err) { console.error(err); }
         }
 
-        function setupListeners() {
-            // Real-time listener for all schedule ranges stored in Firebase
-            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'ranges');
-            onSnapshot(colRef, (snap) => {
-                allSchedules = [];
-                snap.forEach(doc => allSchedules.push({ id: doc.id, ...doc.data() }));
-                document.getElementById('loading').classList.add('hidden');
-                renderSidebar();
-                renderDashboard();
-            }, (err) => {
-                document.getElementById('dbStatus').innerText = "Firebase Error";
-            });
-
-            document.getElementById('dashDate').onchange = renderDashboard;
-            document.getElementById('filterSubject').onchange = renderDashboard;
-            document.getElementById('filterDay').onchange = renderDashboard;
-            document.getElementById('startDate').onchange = fetchRangeData;
-            document.getElementById('endDate').onchange = fetchRangeData;
-            
-            fetchRangeData();
-            pingSheets();
-        }
-
-        async function pingSheets() {
+        async function syncFromGoogleSheets() {
             const el = document.getElementById('sheetStatus');
             try {
-                // Testing connection to your specific Google Script URL
-                const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, { 
-                    method: 'GET',
-                    mode: 'no-cors' 
-                });
-                el.innerText = "SHEETS CONNECTED";
-                el.className = "px-3 py-1 rounded-full bg-green-50 border border-green-100 text-[9px] font-black text-green-600 flex items-center gap-2";
+                // Corrected the fetch URL by adding quotes and parentheses
+                const res = await fetch("https://script.google.com/macros/s/AKfycbwqoj2ttf0kj6pdABos-lLTgLYwgXS17nT5uO6Q9aZaQ0-_G6Ww1Vs9sbc-rnWpfe5i/exec");
+                const data = await res.json();
+                el.innerText = "SHEETS SYNCED";
+                el.className = "px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[9px] font-black text-indigo-600 flex items-center gap-2";
             } catch (e) {
-                el.innerText = "SHEETS TIMEOUT";
-                el.className = "px-3 py-1 rounded-full bg-amber-50 border border-amber-100 text-[9px] font-black text-amber-600 flex items-center gap-2";
+                el.innerText = "SHEET OFFLINE";
             }
         }
 
         async function fetchRangeData() {
-            if (!auth.currentUser) return;
             const start = document.getElementById('startDate').value;
             const end = document.getElementById('endDate').value;
-            const docId = `${activeTeacherName}_${start}_${end}`.replace(/[^a-zA-Z0-9]/g, '_');
+            const docId = `${activeTeacherName}_${start}_${end}`.replace(/\//g, '-');
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'ranges', docId);
             
             const indicator = document.getElementById('syncIndicator');
-            indicator.innerText = "FETCHING...";
+            indicator.innerText = "LOADING...";
             
             try {
                 const res = await getDoc(docRef);
@@ -259,10 +232,10 @@
                     end, 
                     schedule: {} 
                 };
-                indicator.innerText = "READY";
+                indicator.innerText = "CLOUD SYNCED";
                 renderEditor();
             } catch (e) {
-                indicator.innerText = "OFFLINE";
+                indicator.innerText = "ERROR";
             }
         }
 
@@ -273,56 +246,37 @@
             const next = states[(states.indexOf(current) + 1) % states.length];
             
             currentRangeData.schedule[key] = next;
-            const el = document.getElementById(`cell-${day}-${time}`);
+            const el = document.getElementById(`cell-${key}`);
             if(el) {
                 el.className = `slot-cell slot-${next.toLowerCase()}`;
                 el.innerText = next;
             }
 
+            // Auto-save range
             const start = document.getElementById('startDate').value;
             const end = document.getElementById('endDate').value;
-            const docId = `${activeTeacherName}_${start}_${end}`.replace(/[^a-zA-Z0-9]/g, '_');
+            const docId = `${activeTeacherName}_${start}_${end}`.replace(/\//g, '-');
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'ranges', docId);
             
             document.getElementById('syncIndicator').innerText = "SAVING...";
-            try {
-                await setDoc(docRef, currentRangeData);
-                document.getElementById('syncIndicator').innerText = "SAVED TO CLOUD";
-                
-                // OPTIONAL: Also push to Google Sheets here if your script supports POST
-                pushToSheets(currentRangeData);
-            } catch(e) {
-                document.getElementById('syncIndicator').innerText = "SAVE FAILED";
-            }
+            await setDoc(docRef, currentRangeData);
+            document.getElementById('syncIndicator').innerText = "SAVED";
         };
-
-        async function pushToSheets(data) {
-            // This is a background task to keep Sheets updated
-            try {
-                fetch(GOOGLE_SHEET_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(data)
-                });
-            } catch(e) {
-                console.warn("Sheets push failed - ignoring background error");
-            }
-        }
 
         function renderEditor() {
             const meta = teacherMetadata.find(t => t.name === activeTeacherName);
             document.getElementById('currentTeacherTitle').innerText = activeTeacherName;
             document.getElementById('teacherDetailsDisplay').innerText = 
-                `${meta.subjects.join(' & ')} ${meta.assessment ? '• ASSESSMENT' : ''}`;
+                `${meta.subjects.join(' & ')} ${meta.assessment ? '• ASSESSMENT INCLUDED' : ''}`;
 
             const head = document.getElementById('tableHeader');
-            head.innerHTML = '<th class="p-2 text-[10px] text-slate-400 border-b">Time</th>' + 
-                days.map(d => `<th class="p-2 text-[10px] text-slate-400 border-b">${d}</th>`).join('');
+            head.innerHTML = '<th class="p-2 text-[10px] text-slate-400 border-b border-slate-100">Time</th>' + 
+                days.map(d => `<th class="p-2 text-[10px] text-slate-400 border-b border-slate-100">${d}</th>`).join('');
             
             const body = document.getElementById('tableBody');
             body.innerHTML = times.map(t => `
                 <tr class="hover:bg-slate-50/50">
-                    <td class="p-2 text-[9px] font-bold text-slate-400 bg-slate-50/30 border-b">${t}</td>
+                    <td class="p-2 text-[9px] font-bold text-slate-400 bg-slate-50/30 border-b border-white">${t}</td>
                     ${days.map(d => {
                         const status = currentRangeData.schedule[`${d}-${t}`] || 'OFF';
                         return `<td id="cell-${d}-${t}" onclick="toggleSlot('${d}', '${t}')" class="slot-cell slot-${status.toLowerCase()}">${status}</td>`;
@@ -332,45 +286,57 @@
         }
 
         window.renderDashboard = () => {
-            const checkDateVal = document.getElementById('dashDate').value;
-            const checkDate = new Date(checkDateVal);
-            const dayIdx = (checkDate.getDay() + 6) % 7;
-            const checkDay = days[dayIdx];
+            const checkDate = new Date(document.getElementById('dashDate').value);
+            const checkDay = days[(checkDate.getDay() + 6) % 7]; // Adjust 0=Sun to Mon-Sun array
             
             const subFilter = document.getElementById('filterSubject').value;
             const dayFilter = document.getElementById('filterDay').value;
+            
             const grid = document.getElementById('resultsGrid');
             grid.innerHTML = '';
             let count = 0;
 
             allSchedules.forEach(record => {
-                if (checkDateVal >= record.start && checkDateVal <= record.end) {
+                const start = new Date(record.start);
+                const end = new Date(record.end);
+                
+                if (checkDate >= start && checkDate <= end) {
                     const meta = teacherMetadata.find(t => t.name === record.teacher);
                     if (!meta) return;
-                    if (subFilter !== 'All' && !meta.subjects.includes(subFilter)) return;
+
+                    const subjectMatch = subFilter === 'All' || meta.subjects.includes(subFilter);
+                    if (!subjectMatch) return;
+
                     if (dayFilter !== 'All' && checkDay !== dayFilter) return;
 
                     times.forEach(t => {
-                        if (record.schedule[`${checkDay}-${t}`] === 'FREE') {
+                        const status = record.schedule[`${checkDay}-${t}`];
+                        if (status === 'FREE') {
                             count++;
                             grid.innerHTML += `
-                                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
+                                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-all hover:shadow-md group">
                                     <div class="flex justify-between items-start mb-1">
-                                        <span class="text-xs font-bold text-slate-800">${meta.name}</span>
-                                        <span class="text-[9px] px-2 py-0.5 rounded-full font-black bg-green-100 text-green-700">FREE</span>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-slate-800 truncate pr-2 group-hover:text-indigo-600 transition-colors">${meta.name}</span>
+                                            ${meta.assessment ? '<span class="text-[8px] text-indigo-500 font-bold uppercase">Assessment</span>' : ''}
+                                        </div>
+                                        <span class="text-[9px] px-2 py-0.5 rounded-full font-black tracking-tight bg-green-100 text-green-700">FREE</span>
                                     </div>
-                                    <div class="text-[10px] text-slate-400 mb-3">${meta.subjects.join(' & ')}</div>
-                                    <div class="flex justify-between items-center text-[11px] font-bold border-t pt-2">
+                                    <div class="text-[10px] text-slate-400 mb-3 font-medium">${meta.subjects.join(' & ')}</div>
+                                    <div class="flex justify-between items-center text-[11px] font-bold text-slate-800 border-t border-slate-50 pt-3">
                                         <span class="text-indigo-600">${checkDay}</span>
-                                        <span>${t}</span>
+                                        <span class="bg-slate-50 px-2 py-0.5 rounded border border-slate-100">${t}</span>
                                     </div>
-                                </div>`;
+                                </div>
+                            `;
                         }
                     });
                 }
             });
 
-            if (count === 0) grid.innerHTML = `<div class="col-span-full py-10 text-center text-slate-300 text-sm">No availability found for ${checkDateVal}. Try changing the date or filters.</div>`;
+            if (count === 0) {
+                grid.innerHTML = `<div class="col-span-full py-20 text-center text-slate-300 text-sm italic">No availability found for this selection.</div>`;
+            }
         };
 
         window.setActiveTeacher = (name) => {
@@ -382,8 +348,11 @@
         function renderSidebar() {
             const container = document.getElementById('teacherSidebar');
             container.innerHTML = teacherMetadata.map(t => `
-                <button onclick="setActiveTeacher('${t.name}')" class="w-full text-left px-4 py-2 rounded-xl text-[11px] font-bold border mb-1 transition-all ${t.name === activeTeacherName ? 'sidebar-active' : 'bg-white text-slate-600 border-slate-100'}">
-                    ${t.name}
+                <button onclick="setActiveTeacher('${t.name}')" class="w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold border transition-all ${t.name === activeTeacherName ? 'sidebar-active' : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'}">
+                    <div class="flex justify-between items-center">
+                        <span>${t.name}</span>
+                        <span class="text-[8px] opacity-60">${t.subjects.join('/')}</span>
+                    </div>
                 </button>
             `).join('');
         }
@@ -392,13 +361,13 @@
             document.getElementById('dashboardSection').classList.remove('hidden');
             document.getElementById('editorSection').classList.add('hidden');
             document.getElementById('viewBtn').className = "px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md";
-            document.getElementById('editBtn').className = "px-6 py-2 text-sm font-bold rounded-lg text-slate-500";
+            document.getElementById('editBtn').className = "px-6 py-2 text-sm font-bold rounded-lg text-slate-500 hover:bg-slate-50";
         };
         document.getElementById('editBtn').onclick = () => {
             document.getElementById('dashboardSection').classList.add('hidden');
             document.getElementById('editorSection').classList.remove('hidden');
             document.getElementById('editBtn').className = "px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white shadow-md";
-            document.getElementById('viewBtn').className = "px-6 py-2 text-sm font-bold rounded-lg text-slate-500";
+            document.getElementById('viewBtn').className = "px-6 py-2 text-sm font-bold rounded-lg text-slate-500 hover:bg-slate-50";
         };
 
         init();
