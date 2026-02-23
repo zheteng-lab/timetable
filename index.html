@@ -3,83 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Manager | Live Sync Fix</title>
+    <title>C1 Booking Manager | Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .availability-card { transition: all 0.2s ease; border: 2px solid #f1f5f9; }
-        .booked-status { border-color: #4f46e5 !important; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .availability-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #f1f5f9; }
+        .booked-status { border-color: #4f46e5 !important; background-color: #ffffff; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1); }
         .modal-overlay { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
         .toggle-active { background-color: white !important; color: #4f46e5 !important; font-weight: 900 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .toggle-inactive { background-color: transparent !important; color: #94a3b8 !important; }
-        .type-trial { background-color: #fef9c3; border: 1px solid #facc15; color: #854d0e; }
-        .type-regular { background-color: #eef2ff; border: 1px solid #818cf8; color: #312e81; }
+        .type-trial { background-color: #fef9c3; color: #854d0e; border: 1px solid #facc15; }
+        .type-regular { background-color: #eef2ff; color: #312e81; border: 1px solid #818cf8; }
+        .type-replacement { background-color: #f0fdf4; color: #166534; border: 1px solid #4ade80; }
+        #toast { transition: all 0.5s ease; opacity: 0; transform: translateY(20px); pointer-events: none; }
+        #toast.show { opacity: 1; transform: translateY(0); }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen">
+<body class="min-h-screen">
 
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black italic">C1</div>
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl">
+        Booking Successful!
+    </div>
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 h-20 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black italic text-xl">C1</div>
             <div>
-                <h1 class="text-xs font-black uppercase">Staff Portal</h1>
-                <div class="flex items-center gap-1">
-                    <span id="statusDot" class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                    <span id="statusText" class="text-[8px] font-bold text-slate-400 uppercase">Connecting...</span>
+                <h1 class="text-[10px] font-black uppercase tracking-tighter text-slate-400">Management System</h1>
+                <div class="flex items-center gap-2">
+                    <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-300"></span>
+                    <span id="statusText" class="text-xs font-bold text-slate-600 uppercase">Connecting...</span>
                 </div>
             </div>
         </div>
-        <div class="flex bg-slate-100 p-1 rounded-xl w-64">
-            <button onclick="window.setView('list')" id="viewListBtn" class="flex-1 py-1.5 text-[10px] uppercase transition-all toggle-active">Search List</button>
-            <button onclick="window.setView('calendar')" id="viewCalendarBtn" class="flex-1 py-1.5 text-[10px] uppercase transition-all toggle-inactive">Weekly View</button>
+        <div class="flex bg-slate-100 p-1.5 rounded-2xl w-80">
+            <button onclick="window.setView('list')" id="viewListBtn" class="flex-1 py-2.5 text-xs font-black uppercase transition-all toggle-active">Search List</button>
+            <button onclick="window.setView('calendar')" id="viewCalendarBtn" class="flex-1 py-2.5 text-xs font-black uppercase transition-all text-slate-400">Weekly View</button>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto p-4">
-        <div class="bg-white rounded-3xl border border-slate-200 p-6 mb-6 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="space-y-3">
-                <input type="text" id="searchInput" oninput="window.render()" placeholder="Search Student/Teacher..." class="w-full bg-slate-50 p-3 rounded-2xl ring-1 ring-slate-200 text-xs font-bold outline-none">
-                <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-3 rounded-2xl ring-1 ring-slate-200 text-xs font-bold outline-none"></select>
-            </div>
-            <div class="space-y-3">
-                <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-2xl ring-1 ring-slate-200">
-                    <button onclick="window.changeWeek(-1)" class="p-2 text-indigo-600 font-bold">←</button>
-                    <input type="week" id="weekPicker" onchange="window.render()" class="flex-1 bg-transparent text-center font-black text-[10px] uppercase outline-none">
-                    <button onclick="window.changeWeek(1)" class="p-2 text-indigo-600 font-bold">→</button>
+    <main class="max-w-7xl mx-auto p-6">
+        
+        <div id="listFilters" class="bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">1. Student Name</label>
+                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Type name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none focus:ring-2 ring-indigo-500/20">
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="window.setStatusFilter('all')" id="btnFilterAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg bg-slate-900 text-white">All</button>
-                    <button onclick="window.setStatusFilter('open')" id="btnFilterOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg bg-white border">Open</button>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">2. Teacher</label>
+                    <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none cursor-pointer"></select>
                 </div>
-            </div>
-            <div class="grid grid-cols-1 gap-3">
-                 <select id="dayFilter" multiple onchange="window.render()" class="bg-slate-50 rounded-2xl ring-1 ring-slate-200 text-[10px] font-bold p-2 outline-none">
-                    <option value="Mon">Mon</option><option value="Tue">Tue</option><option value="Wed">Wed</option><option value="Thu">Thu</option><option value="Fri">Fri</option><option value="Sat">Sat</option><option value="Sun">Sun</option>
-                </select>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">3. Date</label>
+                    <input type="date" id="dateFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">4. Day</label>
+                    <select id="dayFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
+                        <option value="ALL">All Days</option>
+                        <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">5. Status</label>
+                    <div class="flex bg-slate-100 p-1 rounded-xl">
+                        <button onclick="window.setStatusFilter('all')" id="btnFilterall" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-white shadow-sm text-indigo-600">All</button>
+                        <button onclick="window.setStatusFilter('open')" id="btnFilteropen" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Open</button>
+                        <button onclick="window.setStatusFilter('booked')" id="btnFilterbooked" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Booked</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="listView"><div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div></div>
+        <div id="calendarFilters" class="hidden bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Search Teacher</label>
+                    <select id="calendarTeacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none"></select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Select Week</label>
+                    <input type="week" id="weekPicker" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Show Status</label>
+                    <div id="calStatusToggle" class="flex bg-slate-100 p-1 rounded-xl">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="listView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
         
         <div id="calendarView" class="hidden">
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-x-auto">
-                <div class="min-w-[900px]" id="calendarContainer"></div>
+            <div class="bg-white rounded-[32px] border border-slate-200 shadow-xl overflow-hidden overflow-x-auto">
+                <div class="min-w-[1000px]" id="calendarContainer"></div>
             </div>
         </div>
     </main>
 
     <div id="bookingModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="modal-overlay absolute inset-0" onclick="window.closeModal()"></div>
-        <div class="bg-white rounded-3xl p-8 w-full max-w-sm relative z-10 shadow-2xl text-center">
-            <h2 class="text-xl font-black uppercase mb-1">Book Slot</h2>
-            <p id="bookingSummary" class="text-[10px] font-bold text-slate-400 uppercase mb-6"></p>
-            <input type="text" id="studentInput" placeholder="Student Name" class="w-full bg-slate-100 p-4 rounded-2xl font-bold mb-4 outline-none">
-            <input type="date" id="dateInput" class="w-full bg-slate-100 p-4 rounded-2xl font-bold mb-4 outline-none">
-            <select id="typeInput" class="w-full bg-slate-100 p-4 rounded-2xl font-bold mb-6 outline-none">
-                <option value="Regular">Regular</option><option value="Trial">Trial</option><option value="Replacement">Replacement</option>
-            </select>
-            <button onclick="window.saveBooking()" class="w-full py-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs">Confirm Booking</button>
+        <div class="bg-white rounded-[40px] p-10 w-full max-w-sm relative z-10 shadow-2xl">
+            <h2 class="text-2xl font-black uppercase mb-1 tracking-tighter">Book Slot</h2>
+            <p id="bookingSummary" class="text-[10px] font-bold text-slate-400 uppercase mb-8 tracking-widest"></p>
+            <div class="space-y-4">
+                <input type="text" id="studentInput" placeholder="Student Name" class="w-full bg-slate-50 p-5 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500">
+                <input type="date" id="dateInput" class="w-full bg-slate-50 p-5 rounded-2xl font-bold outline-none">
+                <select id="typeInput" class="w-full bg-slate-50 p-5 rounded-2xl font-bold outline-none">
+                    <option value="Regular">Regular Class</option>
+                    <option value="Trial">Trial Session</option>
+                    <option value="Replacement">Replacement</option>
+                </select>
+                <button onclick="window.saveBooking()" class="w-full py-5 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-[0.2em] shadow-lg shadow-indigo-200 active:scale-95 transition-transform">Confirm Booking</button>
+            </div>
         </div>
     </div>
 
