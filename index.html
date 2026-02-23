@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C1 Booking Manager | Advanced Filtering</title>
+    <title>C1 Booking Manager | Smart Slots</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .card { transition: all 0.2s ease; border: 2px solid #f1f5f9; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #f1f5f9; }
+        .card:hover { transform: translateY(-2px); border-color: #e2e8f0; }
         .card-booked { border-color: #4f46e5 !important; background-color: #ffffff; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1); }
         .toggle-active { background-color: white !important; color: #4f46e5 !important; font-weight: 900 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .status-btn-active { background-color: #1e293b !important; color: white !important; }
@@ -25,7 +26,7 @@
 </head>
 <body class="min-h-screen pb-20">
 
-    <!-- COUNTER -->
+    <!-- COUNTER HUD -->
     <div class="fixed bottom-6 left-6 z-[100] flex flex-col gap-2 bg-slate-900 text-white p-4 rounded-[28px] shadow-2xl border border-slate-700/50 min-w-[180px]">
         <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-1">
             <span class="text-[9px] font-black uppercase text-indigo-400">Activity Summary</span>
@@ -44,16 +45,18 @@
         </div>
     </div>
 
+    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl flex items-center gap-3">
         <span id="toastDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
         <span id="toastMsg">Action Successful</span>
     </div>
 
+    <!-- HEADER NAV -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 h-20 flex items-center justify-between">
         <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black italic text-xl">Class One</div>
+            <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black italic text-xl shadow-lg shadow-indigo-200">C1</div>
             <div>
-                <h1 class="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Booking Class</h1>
+                <h1 class="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Teacher Availability</h1>
                 <div class="flex items-center gap-2">
                     <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-300"></span>
                     <span id="statusText" class="text-xs font-bold text-slate-600 uppercase">Connecting...</span>
@@ -61,19 +64,19 @@
             </div>
         </div>
         <div class="flex bg-slate-100 p-1.5 rounded-2xl w-80">
-            <button onclick="window.setView('list')" id="viewListBtn" class="flex-1 py-2.5 text-xs font-black uppercase transition-all toggle-active">Search List</button>
+            <button onclick="window.setView('list')" id="viewListBtn" class="flex-1 py-2.5 text-xs font-black uppercase transition-all toggle-active">Slots Search</button>
             <button onclick="window.setView('calendar')" id="viewCalendarBtn" class="flex-1 py-2.5 text-xs font-black uppercase transition-all text-slate-400">Weekly View</button>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto p-6">
         
-        <!-- SEARCH LIST FILTERS -->
+        <!-- SEARCH FILTERS -->
         <div id="listFilters" class="bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
             <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Student</label>
-                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
+                <div class="space-y-2 lg:col-span-1">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Search</label>
+                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none ring-indigo-500 focus:ring-2">
                 </div>
                 <div class="space-y-2">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Teacher</label>
@@ -92,7 +95,7 @@
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Date</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Specific Date</label>
                     <input type="date" id="dateFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
                 </div>
                 <div class="space-y-2">
@@ -105,17 +108,17 @@
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Status</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">View Only</label>
                     <div class="flex bg-slate-100 p-1 rounded-xl">
                         <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active">All</button>
-                        <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Open</button>
-                        <button onclick="window.setStatus('booked')" id="btnBooked" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Booked</button>
+                        <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Free</button>
+                        <button onclick="window.setStatus('booked')" id="btnBooked" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Full</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- WEEKLY VIEW FILTERS -->
+        <!-- CALENDAR FILTERS (Shared state) -->
         <div id="calendarFilters" class="hidden bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="space-y-2">
@@ -139,17 +142,15 @@
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">View</label>
                     <div class="flex bg-slate-100 p-1 rounded-xl">
                         <button onclick="window.setStatus('all')" id="btnCalAll" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active">All</button>
-                        <button onclick="window.setStatus('open')" id="btnCalOpen" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Open</button>
-                        <button onclick="window.setStatus('booked')" id="btnCalBooked" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Booked</button>
+                        <button onclick="window.setStatus('open')" id="btnCalOpen" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Free</button>
+                        <button onclick="window.setStatus('booked')" id="btnCalBooked" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Full</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- LIST DISPLAY -->
+        <!-- DISPLAY CONTAINERS -->
         <div id="listView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
-
-        <!-- CALENDAR DISPLAY -->
         <div id="calendarView" class="hidden">
             <div class="bg-white rounded-[40px] border border-slate-200 shadow-xl overflow-x-auto">
                 <div class="min-w-[1000px]" id="calendarContainer"></div>
@@ -180,7 +181,7 @@
                         <option value="Assessment">Assessment</option>
                     </select>
                 </div>
-                <button onclick="window.saveBooking()" class="w-full py-5 mt-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-widest">Confirm Booking</button>
+                <button onclick="window.saveBooking()" class="w-full py-5 mt-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-widest shadow-lg shadow-indigo-100">Confirm Booking</button>
             </div>
         </div>
     </div>
@@ -260,6 +261,16 @@
             sel.innerHTML = '<option value="ALL">All Times</option>' + TIMES.map(t => `<option value="${t}">${t}</option>`).join('');
         }
 
+        function getNextDayDate(dayName) {
+            const dayIndex = DAYS.indexOf(dayName);
+            const now = new Date();
+            const currentDay = (now.getDay() + 6) % 7; // Convert Sun-Sat to Mon-Sun
+            const diff = (dayIndex - currentDay + 7) % 7;
+            const targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + diff);
+            return targetDate.toISOString().split('T')[0];
+        }
+
         function updateGlobalCounts() {
             const getC = (type) => cloudBookings.filter(b => b.type === type).length;
             document.getElementById('countTrial').innerText = getC('Trial');
@@ -280,37 +291,34 @@
                 const list = document.getElementById('listView');
                 let combinedResults = [];
 
-                // 1. Process Master Slots (Available/Potential)
+                // Step 1: Filter Master slots
                 master.forEach(slot => {
-                    const slotDate = dFilter || getDateString(slot.day, weekDates);
+                    // Smart Date Selection: Use filter date OR find next upcoming for that weekday
+                    const slotDate = dFilter || getNextDayDate(slot.day);
                     const booking = findBooking(slot.teacher, slot.time, slotDate);
                     
-                    // Logic to include in results
                     let matches = true;
                     if (teacher !== 'ALL' && slot.teacher !== teacher) matches = false;
                     if (timeSel !== 'ALL' && cleanTime(slot.time) !== cleanTime(timeSel)) matches = false;
                     if (dayFilter !== 'ALL' && slot.day !== dayFilter) matches = false;
                     
                     if (matches) {
-                        if (statusFilter === 'all' || (statusFilter === 'open' && !booking) || (statusFilter === 'booked' && booking)) {
-                            // Only add if search matches teacher or booking student
-                            const searchMatch = !search || 
-                                              slot.teacher.toLowerCase().includes(search) || 
-                                              (booking && booking.student.toLowerCase().includes(search));
-                            
-                            // Type filtering logic
-                            const typeMatch = typeSelect === 'ALL' || (booking && booking.type === typeSelect);
+                        const searchMatch = !search || 
+                                          slot.teacher.toLowerCase().includes(search) || 
+                                          (booking && booking.student.toLowerCase().includes(search));
+                        
+                        const typeMatch = typeSelect === 'ALL' || (booking && booking.type === typeSelect);
 
-                            if (searchMatch && typeMatch) {
+                        if (searchMatch && typeMatch) {
+                            if (statusFilter === 'all' || (statusFilter === 'open' && !booking) || (statusFilter === 'booked' && booking)) {
                                 combinedResults.push({ item: slot, b: booking, date: slotDate });
                             }
                         }
                     }
                 });
 
-                // 2. Process Bookings that might not be in Master (Special outside-hours bookings)
+                // Step 2: Handle bookings not in Master (Custom times/Special events)
                 cloudBookings.forEach(b => {
-                    // Avoid duplicates already processed in Master loop
                     const exists = combinedResults.some(res => res.b && res.b.id === b.id);
                     if (exists) return;
 
@@ -320,15 +328,13 @@
                     if (dayFilter !== 'ALL' && b.day !== dayFilter) matches = false;
                     if (dFilter && b.date !== dFilter) matches = false;
                     if (typeSelect !== 'ALL' && b.type !== typeSelect) matches = false;
+                    if (statusFilter === 'open') matches = false;
                     if (search && !b.student.toLowerCase().includes(search) && !b.teacher.toLowerCase().includes(search)) matches = false;
-                    if (statusFilter === 'open') matches = false; // Bookings aren't open
 
-                    if (matches) {
-                        combinedResults.push({ item: null, b: b, date: b.date });
-                    }
+                    if (matches) combinedResults.push({ item: null, b: b, date: b.date });
                 });
 
-                // Sort by Day and Time
+                // Sort results by Day and then Time
                 combinedResults.sort((a,b) => {
                     const d1 = DAYS.indexOf(a.item ? a.item.day : a.b.day);
                     const d2 = DAYS.indexOf(b.item ? b.item.day : b.b.day);
@@ -337,7 +343,7 @@
                 });
 
                 list.innerHTML = combinedResults.map(res => renderCard(res.item, res.b, res.date)).join('') || 
-                    `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs">No matching results</p></div>`;
+                    `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs">No slots found for this selection</p></div>`;
             } else {
                 renderWeeklyView(weekDates, teacher, typeSelect);
             }
@@ -347,29 +353,32 @@
             const teacher = b ? b.teacher : item.teacher;
             const day = b ? b.day : item.day;
             const time = b ? b.time : item.time;
-            const displayDate = b ? b.date : (slotDate || 'Upcoming');
+            const displayDate = b ? b.date : slotDate;
             const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Class') : item.subject;
 
             return `
             <div class="card p-6 rounded-[32px] bg-white ${b ? 'card-booked' : ''}">
                 <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <p class="text-[10px] font-black uppercase text-indigo-600">${teacher}</p>
-                        <p class="text-[8px] font-bold text-slate-400 uppercase">${subject}</p>
+                    <div class="max-w-[70%]">
+                        <p class="text-[10px] font-black uppercase text-indigo-600 truncate">${teacher}</p>
+                        <p class="text-[8px] font-bold text-slate-400 uppercase truncate">${subject}</p>
                     </div>
-                    <span class="text-[8px] font-black uppercase px-2.5 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Free Slot'}</span>
+                    <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Free Slot'}</span>
                 </div>
                 <p class="text-sm font-black text-slate-700 uppercase">${day}</p>
-                <p class="text-[9px] font-bold text-slate-400 uppercase mb-4">${displayDate} @ ${time}</p>
+                <div class="flex items-center gap-2 mb-4">
+                     <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                     <p class="text-[9px] font-bold text-slate-400 uppercase">${displayDate} @ ${time}</p>
+                </div>
                 ${b ? `
                     <div class="p-4 rounded-2xl type-${b.type.toLowerCase()} mb-3">
                         <p class="text-[7px] font-black uppercase opacity-50">Student</p>
-                        <p class="text-xs font-black uppercase">${b.student}</p>
+                        <p class="text-xs font-black uppercase truncate">${b.student}</p>
                         <p class="text-[9px] font-black mt-1 uppercase opacity-80">${b.type}</p>
                     </div>
-                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-100">Cancel Booking</button>
+                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-100 transition-colors">Cancel Class</button>
                 ` : `
-                    <button onclick="window.openBookingModal('${teacher}','${day}','${time}','${slotDate}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Book Slot</button>
+                    <button onclick="window.openBookingModal('${teacher}','${day}','${time}','${slotDate}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">Book Now</button>
                 `}
             </div>`;
         }
@@ -440,7 +449,7 @@
             if(!name || !date) return;
             const id = `${window.currentSlot.teacher}_${date}_${cleanTime(window.currentSlot.time)}`.replace(/[^a-zA-Z0-9]/g, '');
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { ...window.currentSlot, student: name, date, type, id });
-            showToastPopup("Booking Saved!", "bg-emerald-400");
+            showToastPopup("Class Booked Successfully", "bg-emerald-400");
             window.closeModal();
         };
 
@@ -453,7 +462,7 @@
         window.confirmCancel = async () => {
             if(!pendingCancelId) return;
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', pendingCancelId));
-            showToastPopup("Booking Deleted", "bg-red-400");
+            showToastPopup("Booking Removed", "bg-red-400");
             window.closeCancelModal();
         };
 
@@ -476,7 +485,7 @@
             ['all','open','booked'].forEach(k => {
                 const b1 = document.getElementById('btn' + k.charAt(0).toUpperCase() + k.slice(1));
                 const b2 = document.getElementById('btnCal' + k.charAt(0).toUpperCase() + k.slice(1));
-                if(b1) b1.className = (k === v) ? "flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
+                if(b1) b1.className = (k === v) ? "flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400";
                 if(b2) b2.className = (k === v) ? "flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
             });
             window.render();
