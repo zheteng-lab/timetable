@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C1 Booking Manager | Stable</title>
+    <title>C1 Booking Manager | Advanced Filtering</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
@@ -13,7 +13,6 @@
         .toggle-active { background-color: white !important; color: #4f46e5 !important; font-weight: 900 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .status-btn-active { background-color: #1e293b !important; color: white !important; }
         
-        /* Type Styling */
         .type-trial { background-color: #fef9c3; color: #854d0e; border: 1px solid #facc15; }
         .type-replacement { background-color: #ffedd5; color: #9a3412; border: 1px solid #fb923c; }
         .type-assessment { background-color: #f3e8ff; color: #581c87; border: 1px solid #c084fc; }
@@ -26,11 +25,10 @@
 </head>
 <body class="min-h-screen pb-20">
 
-    <!-- TOTAL COUNTER (BOTTOM LEFT) -->
+    <!-- COUNTER -->
     <div class="fixed bottom-6 left-6 z-[100] flex flex-col gap-2 bg-slate-900 text-white p-4 rounded-[28px] shadow-2xl border border-slate-700/50 min-w-[180px]">
         <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-1">
             <span class="text-[9px] font-black uppercase text-indigo-400">Activity Summary</span>
-            <svg class="w-3 h-3 text-slate-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg>
         </div>
         <div class="flex items-center justify-between">
             <span class="text-[10px] font-bold text-slate-400">TRIALS</span>
@@ -46,18 +44,16 @@
         </div>
     </div>
 
-    <!-- TOAST POPUP -->
     <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl flex items-center gap-3">
         <span id="toastDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
         <span id="toastMsg">Action Successful</span>
     </div>
 
-    <!-- NAVIGATION -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 h-20 flex items-center justify-between">
         <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black italic text-xl">C1</div>
+            <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black italic text-xl">Class One</div>
             <div>
-                <h1 class="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Staff Management</h1>
+                <h1 class="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Booking Class</h1>
                 <div class="flex items-center gap-2">
                     <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-300"></span>
                     <span id="statusText" class="text-xs font-bold text-slate-600 uppercase">Connecting...</span>
@@ -74,45 +70,46 @@
         
         <!-- SEARCH LIST FILTERS -->
         <div id="listFilters" class="bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">1. Student Name</label>
-                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Student</label>
+                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">2. Teacher</label>
-                    <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none cursor-pointer"></select>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Teacher</label>
+                    <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none cursor-pointer"></select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">3. Date</label>
-                    <div class="relative">
-                        <input type="date" id="dateFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
-                        <button onclick="document.getElementById('dateFilter').value=''; window.render();" class="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase text-indigo-500 hover:text-indigo-700">Clear</button>
-                    </div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Time</label>
+                    <select id="timeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none"></select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">4. Day</label>
-                    <select id="dayFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Day</label>
+                    <select id="dayFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
                         <option value="ALL">All Days</option>
                         <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option>
                         <option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option>
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">5. Type</label>
-                    <select id="typeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
-                        <option value="ALL">All (Excl. Regular)</option>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Date</label>
+                    <input type="date" id="dateFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Type</label>
+                    <select id="typeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
+                        <option value="ALL">All Special</option>
                         <option value="Trial">Trial</option>
                         <option value="Replacement">Replacement</option>
                         <option value="Assessment">Assessment</option>
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">6. Status</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Status</label>
                     <div class="flex bg-slate-100 p-1 rounded-xl">
-                        <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active">All</button>
-                        <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Open</button>
-                        <button onclick="window.setStatus('booked')" id="btnBooked" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Booked</button>
+                        <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active">All</button>
+                        <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Open</button>
+                        <button onclick="window.setStatus('booked')" id="btnBooked" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Booked</button>
                     </div>
                 </div>
             </div>
@@ -122,7 +119,7 @@
         <div id="calendarFilters" class="hidden bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Search Teacher</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Teacher</label>
                     <select id="calendarTeacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none cursor-pointer"></select>
                 </div>
                 <div class="space-y-2">
@@ -130,16 +127,16 @@
                     <input type="week" id="weekPicker" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Filter Type</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Type</label>
                     <select id="calendarTypeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none">
-                        <option value="ALL">All (Excl. Regular)</option>
+                        <option value="ALL">All Special</option>
                         <option value="Trial">Trial</option>
                         <option value="Replacement">Replacement</option>
                         <option value="Assessment">Assessment</option>
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Filter View</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">View</label>
                     <div class="flex bg-slate-100 p-1 rounded-xl">
                         <button onclick="window.setStatus('all')" id="btnCalAll" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active">All</button>
                         <button onclick="window.setStatus('open')" id="btnCalOpen" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Open</button>
@@ -149,8 +146,10 @@
             </div>
         </div>
 
-        <!-- CONTAINERS -->
+        <!-- LIST DISPLAY -->
         <div id="listView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+
+        <!-- CALENDAR DISPLAY -->
         <div id="calendarView" class="hidden">
             <div class="bg-white rounded-[40px] border border-slate-200 shadow-xl overflow-x-auto">
                 <div class="min-w-[1000px]" id="calendarContainer"></div>
@@ -162,12 +161,12 @@
     <div id="bookingModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="window.closeModal()"></div>
         <div class="bg-white rounded-[40px] p-10 w-full max-w-sm relative z-10 shadow-2xl modal-animate">
-            <h2 class="text-2xl font-black uppercase tracking-tighter mb-1">Special Booking</h2>
+            <h2 class="text-2xl font-black uppercase tracking-tighter mb-1">New Booking</h2>
             <p id="modalInfo" class="text-[10px] font-bold text-slate-400 uppercase mb-8"></p>
             <div class="space-y-4">
                 <div class="space-y-1">
                     <label class="text-[9px] font-black uppercase text-slate-400 ml-1">Student Name</label>
-                    <input type="text" id="stuName" placeholder="Full Name" class="w-full bg-slate-100 p-5 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500">
+                    <input type="text" id="stuName" placeholder="Full Name" class="w-full bg-slate-100 p-5 rounded-2xl font-bold outline-none">
                 </div>
                 <div class="space-y-1">
                     <label class="text-[9px] font-black uppercase text-slate-400 ml-1">Booking Date</label>
@@ -181,24 +180,20 @@
                         <option value="Assessment">Assessment</option>
                     </select>
                 </div>
-                <button onclick="window.saveBooking()" class="w-full py-5 mt-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-widest shadow-lg shadow-indigo-200 active:scale-95 transition-transform">Confirm Booking</button>
+                <button onclick="window.saveBooking()" class="w-full py-5 mt-4 bg-indigo-600 text-white font-black uppercase rounded-2xl text-xs tracking-widest">Confirm Booking</button>
             </div>
         </div>
     </div>
 
-    <!-- CANCEL CONFIRMATION MODAL -->
+    <!-- CANCEL MODAL -->
     <div id="cancelModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onclick="window.closeCancelModal()"></div>
         <div class="bg-white rounded-[40px] p-10 w-full max-w-sm relative z-10 shadow-2xl modal-animate border border-slate-100">
-            <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
-                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </div>
             <h2 class="text-2xl font-black uppercase tracking-tighter mb-2 text-center">Cancel Class?</h2>
             <p id="cancelInfo" class="text-[11px] font-bold text-slate-400 uppercase mb-8 text-center leading-relaxed"></p>
-            
             <div class="space-y-3">
-                <button onclick="window.confirmCancel()" class="w-full py-5 bg-red-500 text-white font-black uppercase rounded-2xl text-[11px] tracking-widest shadow-lg shadow-red-200 active:scale-95 transition-transform">Yes, Cancel Class</button>
-                <button onclick="window.closeCancelModal()" class="w-full py-5 bg-slate-100 text-slate-600 font-black uppercase rounded-2xl text-[11px] tracking-widest active:scale-95 transition-transform">No, Keep Booking</button>
+                <button onclick="window.confirmCancel()" class="w-full py-5 bg-red-500 text-white font-black uppercase rounded-2xl text-[11px] tracking-widest">Confirm Cancel</button>
+                <button onclick="window.closeCancelModal()" class="w-full py-5 bg-slate-100 text-slate-600 font-black uppercase rounded-2xl text-[11px] tracking-widest">Go Back</button>
             </div>
         </div>
     </div>
@@ -228,13 +223,19 @@
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const TIMES = [];
-        for(let h=8; h<=21; h++){ for(let m of ['00','30']){ const am = h >= 12 ? 'pm' : 'am'; const h12 = h % 12 || 12; TIMES.push(`${h12}:${m}${am}`); } }
+        for(let h=8; h<=21; h++){ 
+            for(let m of ['00','30']){ 
+                const am = h >= 12 ? 'pm' : 'am'; 
+                const h12 = h % 12 || 12; 
+                TIMES.push(`${h12}:${m}${am}`); 
+            } 
+        }
 
         async function init() {
             const now = new Date();
             document.getElementById('weekPicker').value = `${now.getFullYear()}-W${String(getWeek(now)).padStart(2, '0')}`;
-            document.getElementById('dateFilter').value = ""; 
-
+            populateTimeFilter();
+            
             await signInAnonymously(auth);
 
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bookings'), (snap) => {
@@ -254,19 +255,22 @@
             });
         }
 
+        function populateTimeFilter() {
+            const sel = document.getElementById('timeFilter');
+            sel.innerHTML = '<option value="ALL">All Times</option>' + TIMES.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+
         function updateGlobalCounts() {
-            const trial = cloudBookings.filter(b => b.type === 'Trial').length;
-            const replacement = cloudBookings.filter(b => b.type === 'Replacement').length;
-            const assessment = cloudBookings.filter(b => b.type === 'Assessment').length;
-            
-            document.getElementById('countTrial').innerText = trial;
-            document.getElementById('countReplacement').innerText = replacement;
-            document.getElementById('countAssessment').innerText = assessment;
+            const getC = (type) => cloudBookings.filter(b => b.type === type).length;
+            document.getElementById('countTrial').innerText = getC('Trial');
+            document.getElementById('countReplacement').innerText = getC('Replacement');
+            document.getElementById('countAssessment').innerText = getC('Assessment');
         }
 
         window.render = () => {
             const weekDates = getWeekDates();
             const teacher = (currentView === 'list' ? document.getElementById('teacherFilter') : document.getElementById('calendarTeacherFilter')).value;
+            const timeSel = (currentView === 'list' ? document.getElementById('timeFilter').value : 'ALL');
             const typeSelect = (currentView === 'list' ? document.getElementById('typeFilter') : document.getElementById('calendarTypeFilter')).value;
             const search = document.getElementById('searchInput').value.toLowerCase();
             const dFilter = document.getElementById('dateFilter').value;
@@ -274,38 +278,66 @@
 
             if (currentView === 'list') {
                 const list = document.getElementById('listView');
-                let cardsHtml = "";
-                if (statusFilter === 'booked') {
-                    const filteredBookings = cloudBookings.filter(b => {
-                        if (teacher !== 'ALL' && b.teacher !== teacher) return false;
-                        if (dayFilter !== 'ALL' && b.day !== dayFilter) return false;
-                        if (typeSelect !== 'ALL' && b.type !== typeSelect) return false;
-                        if (dFilter && b.date !== dFilter) return false;
-                        if (search && !b.student.toLowerCase().includes(search) && !b.teacher.toLowerCase().includes(search)) return false;
-                        return true;
-                    });
-                    cardsHtml = filteredBookings.map(b => renderCard(null, b)).join('');
-                } else {
-                    const filteredMaster = master.filter(item => {
-                        if (teacher !== 'ALL' && item.teacher !== teacher) return false;
-                        if (dayFilter !== 'ALL' && item.day !== dayFilter) return false;
-                        const slotDate = dFilter || getDateString(item.day, weekDates);
-                        const b = findBooking(item.teacher, item.time, slotDate);
-                        
-                        if (statusFilter === 'open' && b) return false;
-                        if (typeSelect !== 'ALL' && b && b.type !== typeSelect) return false;
-                        if (typeSelect !== 'ALL' && !b) return false; 
+                let combinedResults = [];
 
-                        if (search && (!b || !b.student.toLowerCase().includes(search)) && !item.teacher.toLowerCase().includes(search)) return false;
-                        return true;
-                    });
-                    cardsHtml = filteredMaster.map(item => {
-                        const slotDate = dFilter || getDateString(item.day, weekDates);
-                        const b = findBooking(item.teacher, item.time, slotDate);
-                        return renderCard(item, b, slotDate);
-                    }).join('');
-                }
-                list.innerHTML = cardsHtml || `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs tracking-widest">No matching results found</p></div>`;
+                // 1. Process Master Slots (Available/Potential)
+                master.forEach(slot => {
+                    const slotDate = dFilter || getDateString(slot.day, weekDates);
+                    const booking = findBooking(slot.teacher, slot.time, slotDate);
+                    
+                    // Logic to include in results
+                    let matches = true;
+                    if (teacher !== 'ALL' && slot.teacher !== teacher) matches = false;
+                    if (timeSel !== 'ALL' && cleanTime(slot.time) !== cleanTime(timeSel)) matches = false;
+                    if (dayFilter !== 'ALL' && slot.day !== dayFilter) matches = false;
+                    
+                    if (matches) {
+                        if (statusFilter === 'all' || (statusFilter === 'open' && !booking) || (statusFilter === 'booked' && booking)) {
+                            // Only add if search matches teacher or booking student
+                            const searchMatch = !search || 
+                                              slot.teacher.toLowerCase().includes(search) || 
+                                              (booking && booking.student.toLowerCase().includes(search));
+                            
+                            // Type filtering logic
+                            const typeMatch = typeSelect === 'ALL' || (booking && booking.type === typeSelect);
+
+                            if (searchMatch && typeMatch) {
+                                combinedResults.push({ item: slot, b: booking, date: slotDate });
+                            }
+                        }
+                    }
+                });
+
+                // 2. Process Bookings that might not be in Master (Special outside-hours bookings)
+                cloudBookings.forEach(b => {
+                    // Avoid duplicates already processed in Master loop
+                    const exists = combinedResults.some(res => res.b && res.b.id === b.id);
+                    if (exists) return;
+
+                    let matches = true;
+                    if (teacher !== 'ALL' && b.teacher !== teacher) matches = false;
+                    if (timeSel !== 'ALL' && cleanTime(b.time) !== cleanTime(timeSel)) matches = false;
+                    if (dayFilter !== 'ALL' && b.day !== dayFilter) matches = false;
+                    if (dFilter && b.date !== dFilter) matches = false;
+                    if (typeSelect !== 'ALL' && b.type !== typeSelect) matches = false;
+                    if (search && !b.student.toLowerCase().includes(search) && !b.teacher.toLowerCase().includes(search)) matches = false;
+                    if (statusFilter === 'open') matches = false; // Bookings aren't open
+
+                    if (matches) {
+                        combinedResults.push({ item: null, b: b, date: b.date });
+                    }
+                });
+
+                // Sort by Day and Time
+                combinedResults.sort((a,b) => {
+                    const d1 = DAYS.indexOf(a.item ? a.item.day : a.b.day);
+                    const d2 = DAYS.indexOf(b.item ? b.item.day : b.b.day);
+                    if (d1 !== d2) return d1 - d2;
+                    return TIMES.indexOf(cleanTime(a.item ? a.item.time : a.b.time)) - TIMES.indexOf(cleanTime(b.item ? b.item.time : b.b.time));
+                });
+
+                list.innerHTML = combinedResults.map(res => renderCard(res.item, res.b, res.date)).join('') || 
+                    `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs">No matching results</p></div>`;
             } else {
                 renderWeeklyView(weekDates, teacher, typeSelect);
             }
@@ -315,8 +347,8 @@
             const teacher = b ? b.teacher : item.teacher;
             const day = b ? b.day : item.day;
             const time = b ? b.time : item.time;
-            const displayDate = b ? b.date : (slotDate || 'No Date Selected');
-            const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Class') : item.subject;
+            const displayDate = b ? b.date : (slotDate || 'Upcoming');
+            const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Class') : item.subject;
 
             return `
             <div class="card p-6 rounded-[32px] bg-white ${b ? 'card-booked' : ''}">
@@ -325,20 +357,19 @@
                         <p class="text-[10px] font-black uppercase text-indigo-600">${teacher}</p>
                         <p class="text-[8px] font-bold text-slate-400 uppercase">${subject}</p>
                     </div>
-                    <span class="text-[8px] font-black uppercase px-2.5 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Open'}</span>
+                    <span class="text-[8px] font-black uppercase px-2.5 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Free Slot'}</span>
                 </div>
                 <p class="text-sm font-black text-slate-700 uppercase">${day}</p>
-                <p class="text-[9px] font-bold text-slate-400 uppercase mb-4">${displayDate}</p>
+                <p class="text-[9px] font-bold text-slate-400 uppercase mb-4">${displayDate} @ ${time}</p>
                 ${b ? `
                     <div class="p-4 rounded-2xl type-${b.type.toLowerCase()} mb-3">
                         <p class="text-[7px] font-black uppercase opacity-50">Student</p>
                         <p class="text-xs font-black uppercase">${b.student}</p>
                         <p class="text-[9px] font-black mt-1 uppercase opacity-80">${b.type}</p>
-                        <p class="text-[7px] mt-2 opacity-50 font-bold">${time}</p>
                     </div>
-                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-100 transition-colors">Cancel Class</button>
+                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-100">Cancel Booking</button>
                 ` : `
-                    <button onclick="window.openBookingModal('${teacher}','${day}','${time}','${slotDate}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Book Now</button>
+                    <button onclick="window.openBookingModal('${teacher}','${day}','${time}','${slotDate}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Book Slot</button>
                 `}
             </div>`;
         }
@@ -359,36 +390,18 @@
                     <div class="p-4 text-[9px] font-black text-slate-300 flex items-center justify-center border-r border-slate-100">${time}</div>
                     ${DAYS.map(day => {
                         const dateStr = getDateString(day, weekDates);
-                        
-                        // 1. Find all booked slots for this time/date
-                        const dayBookings = cloudBookings.filter(b => 
-                            b.date === dateStr && 
-                            cleanTime(b.time) === cleanTime(time) && 
-                            (tFilter === 'ALL' || b.teacher === tFilter)
-                        );
+                        const dayBookings = cloudBookings.filter(b => b.date === dateStr && cleanTime(b.time) === cleanTime(time) && (tFilter === 'ALL' || b.teacher === tFilter));
+                        const masterSlots = master.filter(s => s.day === day && cleanTime(s.time) === cleanTime(time) && (tFilter === 'ALL' || s.teacher === tFilter));
 
-                        // 2. Find all available master slots for this time/day
-                        const masterSlots = master.filter(s => 
-                            s.day === day && 
-                            cleanTime(s.time) === cleanTime(time) && 
-                            (tFilter === 'ALL' || s.teacher === tFilter)
-                        );
-
-                        // 3. Merge them: Show booking if exists, otherwise show master slot if no booking for that specific teacher
                         const displayItems = [];
-                        
-                        // Add booked ones first
                         dayBookings.forEach(b => {
                             if (typeFilter === 'ALL' || b.type === typeFilter) {
                                 if (statusFilter !== 'open') displayItems.push({ isBooked: true, data: b });
                             }
                         });
-
-                        // Add open master slots if not booked by a special booking
                         if (statusFilter !== 'booked' && typeFilter === 'ALL') {
                             masterSlots.forEach(s => {
-                                const isBooked = dayBookings.some(b => b.teacher === s.teacher);
-                                if (!isBooked) displayItems.push({ isBooked: false, data: s });
+                                if (!dayBookings.some(b => b.teacher === s.teacher)) displayItems.push({ isBooked: false, data: s });
                             });
                         }
 
@@ -396,9 +409,7 @@
                             ${displayItems.map(item => {
                                 const b = item.isBooked ? item.data : null;
                                 const s = !item.isBooked ? item.data : null;
-                                
-                                return `
-                                <div onclick="${b ? `window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')` : `window.openBookingModal('${s.teacher}','${s.day}','${s.time}','${dateStr}')`}" 
+                                return `<div onclick="${b ? `window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')` : `window.openBookingModal('${s.teacher}','${s.day}','${s.time}','${dateStr}')`}" 
                                      class="text-[8px] p-2 rounded-xl font-black uppercase truncate cursor-pointer shadow-sm ${b ? `type-${b.type.toLowerCase()}` : 'bg-slate-900 text-white'}">
                                      ${b ? `<span class="opacity-60 text-[7px] block">${b.teacher}</span>${b.student}` : s.teacher}
                                 </div>`;
@@ -427,13 +438,9 @@
             const date = document.getElementById('stuDate').value;
             const type = document.getElementById('stuType').value;
             if(!name || !date) return;
-
             const id = `${window.currentSlot.teacher}_${date}_${cleanTime(window.currentSlot.time)}`.replace(/[^a-zA-Z0-9]/g, '');
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), {
-                ...window.currentSlot, student: name, date, type, id: id
-            });
-            
-            showToastPopup("Booking Successful!", "bg-emerald-400");
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { ...window.currentSlot, student: name, date, type, id });
+            showToastPopup("Booking Saved!", "bg-emerald-400");
             window.closeModal();
         };
 
@@ -446,22 +453,12 @@
         window.confirmCancel = async () => {
             if(!pendingCancelId) return;
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', pendingCancelId));
-            showToastPopup("Cancel Successful", "bg-red-400");
+            showToastPopup("Booking Deleted", "bg-red-400");
             window.closeCancelModal();
         };
 
-        window.closeCancelModal = () => {
-            document.getElementById('cancelModal').classList.add('hidden');
-            pendingCancelId = null;
-        };
-
-        function showToastPopup(msg, colorClass) {
-            const t = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = msg;
-            document.getElementById('toastDot').className = `w-2 h-2 rounded-full ${colorClass}`;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
-        }
+        window.closeCancelModal = () => document.getElementById('cancelModal').classList.add('hidden');
+        window.closeModal = () => document.getElementById('bookingModal').classList.add('hidden');
 
         window.setView = (v) => {
             currentView = v;
@@ -479,10 +476,8 @@
             ['all','open','booked'].forEach(k => {
                 const b1 = document.getElementById('btn' + k.charAt(0).toUpperCase() + k.slice(1));
                 const b2 = document.getElementById('btnCal' + k.charAt(0).toUpperCase() + k.slice(1));
-                const clsActive = "flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active";
-                const clsInactive = "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
-                if(b1) b1.className = (k === v) ? clsActive : clsInactive;
-                if(b2) b2.className = (k === v) ? clsActive : clsInactive;
+                if(b1) b1.className = (k === v) ? "flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
+                if(b2) b2.className = (k === v) ? "flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
             });
             window.render();
         };
@@ -513,13 +508,18 @@
         }
 
         function updateStatusIndicator(t, c) {
-            const statusText = document.getElementById('statusText');
-            const statusDot = document.getElementById('statusDot');
-            if(statusText) statusText.innerText = t;
-            if(statusDot) statusDot.className = `w-2 h-2 rounded-full ${c}`;
+            document.getElementById('statusText').innerText = t;
+            document.getElementById('statusDot').className = `w-2 h-2 rounded-full ${c}`;
         }
 
-        window.closeModal = () => document.getElementById('bookingModal').classList.add('hidden');
+        function showToastPopup(msg, colorClass) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('toastDot').className = `w-2 h-2 rounded-full ${colorClass}`;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
         init();
     </script>
 </body>
