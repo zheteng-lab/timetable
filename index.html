@@ -18,8 +18,9 @@
         .type-replacement { background-color: #ffedd5; color: #9a3412; border: 1px solid #fb923c; }
         .type-assessment { background-color: #f3e8ff; color: #581c87; border: 1px solid #c084fc; }
 
-        .day-tag { cursor: pointer; transition: all 0.2s; border: 1px solid #e2e8f0; }
-        .day-tag.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
+        .filter-tag { cursor: pointer; transition: all 0.2s; border: 1px solid #e2e8f0; white-space: nowrap; }
+        .filter-tag:hover { border-color: #cbd5e1; background-color: #f1f5f9; }
+        .filter-tag.active { background-color: #4f46e5; color: white; border-color: #4f46e5; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
 
         #toast { transition: all 0.4s ease; transform: translateY(100px); opacity: 0; pointer-events: none; }
         #toast.show { transform: translateY(0); opacity: 1; }
@@ -80,25 +81,21 @@
         
         <!-- SEARCH FILTERS -->
         <div id="listFilters" class="bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                <div class="space-y-2 lg:col-span-1">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Search</label>
-                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none ring-indigo-500 focus:ring-2">
+            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Search Name</label>
+                    <input type="text" id="searchInput" oninput="window.render()" placeholder="Teacher/Student..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none ring-indigo-500 focus:ring-2">
                 </div>
                 <div class="space-y-2">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Teacher</label>
                     <select id="teacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none cursor-pointer"></select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Time</label>
-                    <select id="timeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none"></select>
-                </div>
-                <div class="space-y-2">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Check Date</label>
                     <input type="date" id="dateFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Type</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Special Type</label>
                     <select id="typeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
                         <option value="ALL">All Special</option>
                         <option value="Trial">Trial</option>
@@ -107,16 +104,20 @@
                     </select>
                 </div>
                 <div class="space-y-2 flex flex-col justify-end">
-                    <button onclick="window.clearFilters()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-2xl transition-all">Clear Filters</button>
+                    <button onclick="window.clearFilters()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-2xl transition-all">Clear All Filters</button>
                 </div>
+            </div>
 
-                <!-- Multi-Day Selector Row -->
-                <div class="col-span-full space-y-2 pt-2 border-t border-slate-50">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Filter by Days (Multi-select)</label>
-                    <div id="daySelector" class="flex flex-wrap gap-2">
-                        <!-- Days injected by JS -->
-                    </div>
-                </div>
+            <!-- Multi-Select Row for Days -->
+            <div class="space-y-2 mb-6">
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Filter by Days</label>
+                <div id="daySelector" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Multi-Select Row for Times -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Filter by Times</label>
+                <div id="timeSelector" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1"></div>
             </div>
         </div>
 
@@ -154,7 +155,7 @@
             </div>
         </div>
 
-        <!-- LIST STATUS TOGGLE (Separated for cleaner grid) -->
+        <!-- LIST STATUS TOGGLE -->
         <div id="listStatusRow" class="mb-6 flex justify-end">
             <div class="flex bg-white border border-slate-200 p-1.5 rounded-[20px] w-64 shadow-sm">
                 <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-xl status-btn-active">All Slots</button>
@@ -234,7 +235,8 @@
         const appId = 'timetable-manager-pro-v3';
 
         let master = [], cloudBookings = [], currentView = 'list', statusFilter = 'all';
-        let selectedDays = []; // Tracks multiple selected days
+        let selectedDays = [];
+        let selectedTimes = [];
         let pendingCancelId = null;
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -255,8 +257,9 @@
         async function init() {
             const now = new Date();
             document.getElementById('weekPicker').value = `${now.getFullYear()}-W${String(getWeek(now)).padStart(2, '0')}`;
-            populateTimeFilter();
+            
             renderDaySelector();
+            renderTimeSelector();
             
             await signInAnonymously(auth);
 
@@ -281,9 +284,20 @@
             const container = document.getElementById('daySelector');
             container.innerHTML = DAYS.map(day => `
                 <div onclick="window.toggleDay('${day}')" 
-                     id="tag-${day}"
-                     class="day-tag px-4 py-2 rounded-xl text-[10px] font-black uppercase">
+                     id="tag-day-${day}"
+                     class="filter-tag px-4 py-2 rounded-xl text-[10px] font-black uppercase">
                     ${day}
+                </div>
+            `).join('');
+        }
+
+        function renderTimeSelector() {
+            const container = document.getElementById('timeSelector');
+            container.innerHTML = TIMES.map(time => `
+                <div onclick="window.toggleTime('${time}')" 
+                     id="tag-time-${time.replace(':','')}"
+                     class="filter-tag px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">
+                    ${time}
                 </div>
             `).join('');
         }
@@ -291,10 +305,21 @@
         window.toggleDay = (day) => {
             if (selectedDays.includes(day)) {
                 selectedDays = selectedDays.filter(d => d !== day);
-                document.getElementById(`tag-${day}`).classList.remove('active');
+                document.getElementById(`tag-day-${day}`).classList.remove('active');
             } else {
                 selectedDays.push(day);
-                document.getElementById(`tag-${day}`).classList.add('active');
+                document.getElementById(`tag-day-${day}`).classList.add('active');
+            }
+            window.render();
+        };
+
+        window.toggleTime = (time) => {
+            if (selectedTimes.includes(time)) {
+                selectedTimes = selectedTimes.filter(t => t !== time);
+                document.getElementById(`tag-time-${time.replace(':','')}`).classList.remove('active');
+            } else {
+                selectedTimes.push(time);
+                document.getElementById(`tag-time-${time.replace(':','')}`).classList.add('active');
             }
             window.render();
         };
@@ -314,11 +339,6 @@
                 sel.innerHTML = '<option value="ALL">All Teachers</option>' + 
                     teachers.map(t => `<option value="${t}" ${t === currentVal ? 'selected' : ''}>${t}</option>`).join('');
             });
-        }
-
-        function populateTimeFilter() {
-            const sel = document.getElementById('timeFilter');
-            sel.innerHTML = '<option value="ALL">All Times</option>' + TIMES.map(t => `<option value="${t}">${t}</option>`).join('');
         }
 
         function getWeek(date) {
@@ -360,7 +380,6 @@
         window.render = () => {
             const weekDates = getWeekDates();
             const tFilter = (currentView === 'list' ? document.getElementById('teacherFilter').value : document.getElementById('calendarTeacherFilter').value);
-            const timeFilterVal = (currentView === 'list' ? document.getElementById('timeFilter').value : 'ALL');
             const typeFilterVal = (currentView === 'list' ? document.getElementById('typeFilter').value : document.getElementById('calendarTypeFilter').value);
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
             const checkDateVal = document.getElementById('dateFilter').value;
@@ -373,8 +392,8 @@
                     const fullDay = DAY_MAP[slot.day] || slot.day;
                     
                     if (selectedDays.length > 0 && !selectedDays.includes(fullDay)) return;
+                    if (selectedTimes.length > 0 && !selectedTimes.some(t => cleanTime(t) === cleanTime(slot.time))) return;
                     if (tFilter !== 'ALL' && slot.teacher !== tFilter) return;
-                    if (timeFilterVal !== 'ALL' && cleanTime(slot.time) !== cleanTime(timeFilterVal)) return;
 
                     let booking = null;
                     if (checkDateVal) {
@@ -390,7 +409,7 @@
 
                     const matchesSearch = !searchVal || 
                         slot.teacher.toLowerCase().includes(searchVal) || 
-                        (booking && booking.student.toLowerCase().includes(searchVal));
+                        (booking && (booking.student.toLowerCase().includes(searchVal) || booking.teacher.toLowerCase().includes(searchVal)));
                     if (!matchesSearch) return;
 
                     if (typeFilterVal !== 'ALL' && (!booking || booking.type !== typeFilterVal)) return;
@@ -398,13 +417,14 @@
                     results.push({ item: slot, b: booking });
                 });
 
+                // Handle bookings without a master slot (manual/special additions)
                 cloudBookings.forEach(b => {
                     const fullDay = DAY_MAP[b.day] || b.day;
                     if (results.some(r => r.b && r.b.id === b.id)) return;
                     
                     if (selectedDays.length > 0 && !selectedDays.includes(fullDay)) return;
+                    if (selectedTimes.length > 0 && !selectedTimes.some(t => cleanTime(t) === cleanTime(b.time))) return;
                     if (tFilter !== 'ALL' && b.teacher !== tFilter) return;
-                    if (timeFilterVal !== 'ALL' && cleanTime(b.time) !== cleanTime(timeFilterVal)) return;
                     if (checkDateVal && b.date !== checkDateVal) return;
                     if (typeFilterVal !== 'ALL' && b.type !== typeFilterVal) return;
                     if (statusFilter === 'open') return;
@@ -425,7 +445,7 @@
                 });
 
                 list.innerHTML = results.map(res => renderCard(res.item, res.b)).join('') || 
-                    `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs">No slots found</p></div>`;
+                    `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs">No slots found matching your filters</p></div>`;
             } else {
                 renderWeeklyView(weekDates, tFilter, typeFilterVal);
             }
@@ -550,24 +570,27 @@
         window.closeModal = () => document.getElementById('bookingModal').classList.add('hidden');
 
         window.clearFilters = () => {
-            // Reset all inputs
             document.getElementById('searchInput').value = '';
             document.getElementById('teacherFilter').value = 'ALL';
             document.getElementById('calendarTeacherFilter').value = 'ALL';
-            document.getElementById('timeFilter').value = 'ALL';
             document.getElementById('dateFilter').value = '';
             document.getElementById('typeFilter').value = 'ALL';
             document.getElementById('calendarTypeFilter').value = 'ALL';
             
-            // Reset Multi-day
+            // Reset Days
             selectedDays = [];
-            DAYS.forEach(day => document.getElementById(`tag-${day}`).classList.remove('active'));
+            DAYS.forEach(day => document.getElementById(`tag-day-${day}`).classList.remove('active'));
             
-            // Reset Status
+            // Reset Times
+            selectedTimes = [];
+            TIMES.forEach(t => {
+                const el = document.getElementById(`tag-time-${t.replace(':','')}`);
+                if(el) el.classList.remove('active');
+            });
+            
             window.setStatus('all');
-            
             window.render();
-            showToastPopup("Filters Cleared", "bg-slate-400");
+            showToastPopup("All Filters Cleared", "bg-slate-500");
         };
 
         window.setView = (v) => {
