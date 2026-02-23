@@ -23,7 +23,6 @@
         .modal-animate { animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -100,7 +99,7 @@
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Specific Date</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Check Date</label>
                     <input type="date" id="dateFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
                 </div>
                 <div class="space-y-2">
@@ -113,7 +112,7 @@
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">View Only</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Status</label>
                     <div class="flex bg-slate-100 p-1 rounded-xl">
                         <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active">All</button>
                         <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Free</button>
@@ -228,6 +227,11 @@
         let pendingCancelId = null;
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const DAY_MAP = {
+            'Mon': 'Monday', 'Tue': 'Tuesday', 'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday', 'Sun': 'Sunday',
+            'Monday': 'Monday', 'Tuesday': 'Tuesday', 'Wednesday': 'Wednesday', 'Thursday': 'Thursday', 'Friday': 'Friday', 'Saturday': 'Saturday', 'Sunday': 'Sunday'
+        };
+
         const TIMES = [];
         for(let h=8; h<=21; h++){ 
             for(let m of ['00','30']){ 
@@ -304,16 +308,6 @@
             });
         }
 
-        function getNextDayDate(dayName) {
-            const dayIndex = DAYS.indexOf(dayName);
-            const now = new Date();
-            const currentDay = (now.getDay() + 6) % 7;
-            const diff = (dayIndex - currentDay + 7) % 7;
-            const targetDate = new Date(now);
-            targetDate.setDate(now.getDate() + diff);
-            return targetDate.toISOString().split('T')[0];
-        }
-
         function updateGlobalCounts() {
             const getC = (type) => cloudBookings.filter(b => b.type === type).length;
             document.getElementById('countTrial').innerText = getC('Trial');
@@ -331,96 +325,111 @@
 
         window.render = () => {
             const weekDates = getWeekDates();
-            const teacher = (currentView === 'list' ? document.getElementById('teacherFilter') : document.getElementById('calendarTeacherFilter')).value;
-            const timeSel = (currentView === 'list' ? document.getElementById('timeFilter').value : 'ALL');
-            const typeSelect = (currentView === 'list' ? document.getElementById('typeFilter') : document.getElementById('calendarTypeFilter')).value;
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const dFilter = document.getElementById('dateFilter').value;
-            const dayFilter = document.getElementById('dayFilter').value;
+            const tFilter = (currentView === 'list' ? document.getElementById('teacherFilter').value : document.getElementById('calendarTeacherFilter').value);
+            const timeFilterVal = (currentView === 'list' ? document.getElementById('timeFilter').value : 'ALL');
+            const typeFilterVal = (currentView === 'list' ? document.getElementById('typeFilter').value : document.getElementById('calendarTypeFilter').value);
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const checkDateVal = document.getElementById('dateFilter').value;
+            const dayFilterVal = document.getElementById('dayFilter').value;
 
             if (currentView === 'list') {
                 const list = document.getElementById('listView');
-                let combinedResults = [];
+                let results = [];
 
+                // 1. Process Master Slots
                 master.forEach(slot => {
-                    const slotDate = dFilter || getNextDayDate(slot.day);
-                    const booking = findBooking(slot.teacher, slot.time, slotDate);
+                    const fullDay = DAY_MAP[slot.day] || slot.day;
                     
-                    let matches = true;
-                    if (teacher !== 'ALL' && slot.teacher !== teacher) matches = false;
-                    if (timeSel !== 'ALL' && cleanTime(slot.time) !== cleanTime(timeSel)) matches = false;
-                    if (dayFilter !== 'ALL' && slot.day !== dayFilter) matches = false;
-                    
-                    if (matches) {
-                        const searchMatch = !search || 
-                                          slot.teacher.toLowerCase().includes(search) || 
-                                          (booking && booking.student.toLowerCase().includes(search));
-                        const typeMatch = typeSelect === 'ALL' || (booking && booking.type === typeSelect);
+                    // Filters
+                    if (dayFilterVal !== 'ALL' && fullDay !== dayFilterVal) return;
+                    if (tFilter !== 'ALL' && slot.teacher !== tFilter) return;
+                    if (timeFilterVal !== 'ALL' && cleanTime(slot.time) !== cleanTime(timeFilterVal)) return;
 
-                        if (searchMatch && typeMatch) {
-                            if (statusFilter === 'all' || (statusFilter === 'open' && !booking) || (statusFilter === 'booked' && booking)) {
-                                combinedResults.push({ item: slot, b: booking, date: slotDate });
-                            }
-                        }
+                    // Check if there is a booking for this specific master slot on the "Check Date"
+                    // If no "Check Date", we show the master slot as "Free" unless status is "Booked"
+                    let booking = null;
+                    if (checkDateVal) {
+                        booking = cloudBookings.find(b => 
+                            b.teacher === slot.teacher && 
+                            cleanTime(b.time) === cleanTime(slot.time) && 
+                            b.date === checkDateVal
+                        );
                     }
+
+                    if (statusFilter === 'open' && booking) return;
+                    if (statusFilter === 'booked' && !booking) return;
+
+                    const matchesSearch = !searchVal || 
+                        slot.teacher.toLowerCase().includes(searchVal) || 
+                        (booking && booking.student.toLowerCase().includes(searchVal));
+                    if (!matchesSearch) return;
+
+                    if (typeFilterVal !== 'ALL' && (!booking || booking.type !== typeFilterVal)) return;
+
+                    results.push({ item: slot, b: booking });
                 });
 
+                // 2. Process Floating Bookings (those not in master, e.g. custom times)
                 cloudBookings.forEach(b => {
-                    if (combinedResults.some(res => res.b && res.b.id === b.id)) return;
-                    let matches = true;
-                    if (teacher !== 'ALL' && b.teacher !== teacher) matches = false;
-                    if (timeSel !== 'ALL' && cleanTime(b.time) !== cleanTime(timeSel)) matches = false;
-                    if (dayFilter !== 'ALL' && b.day !== dayFilter) matches = false;
-                    if (dFilter && b.date !== dFilter) matches = false;
-                    if (typeSelect !== 'ALL' && b.type !== typeSelect) matches = false;
-                    if (statusFilter === 'open') matches = false;
-                    if (search && !b.student.toLowerCase().includes(search) && !b.teacher.toLowerCase().includes(search)) matches = false;
-                    if (matches) combinedResults.push({ item: null, b: b, date: b.date });
+                    const fullDay = DAY_MAP[b.day] || b.day;
+                    if (results.some(r => r.b && r.b.id === b.id)) return;
+                    
+                    if (dayFilterVal !== 'ALL' && fullDay !== dayFilterVal) return;
+                    if (tFilter !== 'ALL' && b.teacher !== tFilter) return;
+                    if (timeFilterVal !== 'ALL' && cleanTime(b.time) !== cleanTime(timeFilterVal)) return;
+                    if (checkDateVal && b.date !== checkDateVal) return;
+                    if (typeFilterVal !== 'ALL' && b.type !== typeFilterVal) return;
+                    if (statusFilter === 'open') return;
+
+                    const matchesSearch = !searchVal || 
+                        b.teacher.toLowerCase().includes(searchVal) || 
+                        b.student.toLowerCase().includes(searchVal);
+                    if (!matchesSearch) return;
+
+                    results.push({ item: null, b: b });
                 });
 
-                combinedResults.sort((a,b) => {
-                    const d1 = DAYS.indexOf(a.item ? a.item.day : a.b.day);
-                    const d2 = DAYS.indexOf(b.item ? b.item.day : b.b.day);
+                results.sort((a,b) => {
+                    const d1 = DAYS.indexOf(DAY_MAP[a.item ? a.item.day : a.b.day]);
+                    const d2 = DAYS.indexOf(DAY_MAP[b.item ? b.item.day : b.b.day]);
                     if (d1 !== d2) return d1 - d2;
                     return TIMES.indexOf(cleanTime(a.item ? a.item.time : a.b.time)) - TIMES.indexOf(cleanTime(b.item ? b.item.time : b.b.time));
                 });
 
-                list.innerHTML = combinedResults.map(res => renderCard(res.item, res.b, res.date)).join('') || 
+                list.innerHTML = results.map(res => renderCard(res.item, res.b)).join('') || 
                     `<div class="col-span-full py-20 text-center"><p class="text-slate-400 font-black uppercase text-xs">No slots found</p></div>`;
             } else {
-                renderWeeklyView(weekDates, teacher, typeSelect);
+                renderWeeklyView(weekDates, tFilter, typeFilterVal);
             }
         };
 
-        function renderCard(item, b, slotDate) {
+        function renderCard(item, b) {
             const teacher = b ? b.teacher : item.teacher;
-            const day = b ? b.day : item.day;
+            const rawDay = b ? b.day : item.day;
+            const fullDay = DAY_MAP[rawDay] || rawDay;
             const time = b ? b.time : item.time;
-            const displayDate = b ? b.date : slotDate;
-            const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Class') : item.subject;
+            const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Session') : item.subject;
 
             return `
-            <div class="card p-6 rounded-[32px] bg-white ${b ? 'card-booked' : ''}">
+            <div class="card p-6 rounded-[32px] bg-white ${b ? 'card-booked' : 'shadow-sm'}">
                 <div class="flex justify-between items-start mb-4">
                     <div class="max-w-[70%]">
                         <p class="text-[10px] font-black uppercase text-indigo-600 truncate">${teacher}</p>
                         <p class="text-[8px] font-bold text-slate-400 uppercase truncate">${subject}</p>
                     </div>
-                    <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Free Slot'}</span>
+                    <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Available'}</span>
                 </div>
-                <p class="text-sm font-black text-slate-700 uppercase">${day}</p>
-                <div class="flex items-center gap-2 mb-4">
-                     <p class="text-[9px] font-bold text-slate-400 uppercase">${displayDate} @ ${time}</p>
-                </div>
+                <p class="text-sm font-black text-slate-700 uppercase">${fullDay}</p>
+                <p class="text-[9px] font-bold text-slate-400 uppercase mb-4">${time}</p>
                 ${b ? `
                     <div class="p-4 rounded-2xl type-${b.type.toLowerCase()} mb-3">
                         <p class="text-[7px] font-black uppercase opacity-50">Student</p>
                         <p class="text-xs font-black uppercase truncate">${b.student}</p>
-                        <p class="text-[9px] font-black mt-1 uppercase opacity-80">${b.type}</p>
+                        <p class="text-[9px] font-black mt-1 uppercase opacity-80">${b.date} | ${b.type}</p>
                     </div>
-                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-colors">Cancel Class</button>
+                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-colors">Cancel Booking</button>
                 ` : `
-                    <button onclick="window.openBookingModal('${teacher}','${day}','${time}','${slotDate}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">Book Now</button>
+                    <button onclick="window.openBookingModal('${teacher}','${fullDay}','${time}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">Book Now</button>
                 `}
             </div>`;
         }
@@ -442,7 +451,7 @@
                     ${DAYS.map(day => {
                         const dateStr = getDateString(day, weekDates);
                         const dayBookings = cloudBookings.filter(b => b.date === dateStr && cleanTime(b.time) === cleanTime(time) && (tFilter === 'ALL' || b.teacher === tFilter));
-                        const masterSlots = master.filter(s => s.day === day && cleanTime(s.time) === cleanTime(time) && (tFilter === 'ALL' || s.teacher === tFilter));
+                        const masterSlots = master.filter(s => (DAY_MAP[s.day] || s.day) === day && cleanTime(s.time) === cleanTime(time) && (tFilter === 'ALL' || s.teacher === tFilter));
 
                         const displayItems = [];
                         dayBookings.forEach(b => {
@@ -460,7 +469,7 @@
                             ${displayItems.map(item => {
                                 const b = item.isBooked ? item.data : null;
                                 const s = !item.isBooked ? item.data : null;
-                                return `<div onclick="${b ? `window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')` : `window.openBookingModal('${s.teacher}','${s.day}','${s.time}','${dateStr}')`}" 
+                                return `<div onclick="${b ? `window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')` : `window.openBookingModal('${s.teacher}','${day}','${s.time}')`}" 
                                      class="text-[8px] p-2 rounded-xl font-black uppercase truncate cursor-pointer shadow-sm ${b ? `type-${b.type.toLowerCase()}` : 'bg-slate-900 text-white'}">
                                      ${b ? `<span class="opacity-60 text-[7px] block">${b.teacher}</span>${b.student}` : s.teacher}
                                 </div>`;
@@ -473,13 +482,16 @@
         }
 
         const cleanTime = (t) => t ? t.toLowerCase().replace(/\s/g,'').replace(/\./g,'').replace(/:/g,'') : '';
-        const findBooking = (t, tm, d) => cloudBookings.find(b => b.teacher === t && cleanTime(b.time) === cleanTime(tm) && b.date === d);
         const getDateString = (day, dates) => { const i = DAYS.indexOf(day); return dates[i] ? dates[i].toISOString().split('T')[0] : null; };
 
-        window.openBookingModal = (t, d, tm, dt) => {
+        window.openBookingModal = (t, d, tm) => {
             window.currentSlot = { teacher: t, day: d, time: tm };
             document.getElementById('modalInfo').innerText = `${t} | ${d} @ ${tm}`;
-            document.getElementById('stuDate').value = dt || '';
+            
+            // Auto-fill date if "Check Date" filter is active
+            const checkDate = document.getElementById('dateFilter').value;
+            document.getElementById('stuDate').value = checkDate || '';
+            
             document.getElementById('stuName').value = '';
             document.getElementById('bookingModal').classList.remove('hidden');
         };
