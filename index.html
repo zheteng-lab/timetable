@@ -18,6 +18,9 @@
         .type-replacement { background-color: #ffedd5; color: #9a3412; border: 1px solid #fb923c; }
         .type-assessment { background-color: #f3e8ff; color: #581c87; border: 1px solid #c084fc; }
 
+        .day-tag { cursor: pointer; transition: all 0.2s; border: 1px solid #e2e8f0; }
+        .day-tag.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
+
         #toast { transition: all 0.4s ease; transform: translateY(100px); opacity: 0; pointer-events: none; }
         #toast.show { transform: translateY(0); opacity: 1; }
         .modal-animate { animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -77,7 +80,7 @@
         
         <!-- SEARCH FILTERS -->
         <div id="listFilters" class="bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
                 <div class="space-y-2 lg:col-span-1">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Search</label>
                     <input type="text" id="searchInput" oninput="window.render()" placeholder="Name..." class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none ring-indigo-500 focus:ring-2">
@@ -89,14 +92,6 @@
                 <div class="space-y-2">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Time</label>
                     <select id="timeFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none"></select>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Day</label>
-                    <select id="dayFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold outline-none">
-                        <option value="ALL">All Days</option>
-                        <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option>
-                    </select>
                 </div>
                 <div class="space-y-2">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Check Date</label>
@@ -111,12 +106,15 @@
                         <option value="Assessment">Assessment</option>
                     </select>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Status</label>
-                    <div class="flex bg-slate-100 p-1 rounded-xl">
-                        <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active">All</button>
-                        <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Free</button>
-                        <button onclick="window.setStatus('booked')" id="btnBooked" class="flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400">Full</button>
+                <div class="space-y-2 flex flex-col justify-end">
+                    <button onclick="window.clearFilters()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-2xl transition-all">Clear Filters</button>
+                </div>
+
+                <!-- Multi-Day Selector Row -->
+                <div class="col-span-full space-y-2 pt-2 border-t border-slate-50">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Filter by Days (Multi-select)</label>
+                    <div id="daySelector" class="flex flex-wrap gap-2">
+                        <!-- Days injected by JS -->
                     </div>
                 </div>
             </div>
@@ -124,7 +122,7 @@
 
         <!-- CALENDAR FILTERS -->
         <div id="calendarFilters" class="hidden bg-white rounded-[32px] border border-slate-200 p-8 mb-8 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div class="space-y-2">
                     <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Teacher</label>
                     <select id="calendarTeacherFilter" onchange="window.render()" class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm font-bold outline-none cursor-pointer"></select>
@@ -143,13 +141,25 @@
                     </select>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">View</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Status</label>
                     <div class="flex bg-slate-100 p-1 rounded-xl">
                         <button onclick="window.setStatus('all')" id="btnCalAll" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active">All</button>
                         <button onclick="window.setStatus('open')" id="btnCalOpen" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Free</button>
                         <button onclick="window.setStatus('booked')" id="btnCalBooked" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400">Full</button>
                     </div>
                 </div>
+                <div class="space-y-2 flex flex-col justify-end">
+                    <button onclick="window.clearFilters()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-2xl transition-all">Clear All</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIST STATUS TOGGLE (Separated for cleaner grid) -->
+        <div id="listStatusRow" class="mb-6 flex justify-end">
+            <div class="flex bg-white border border-slate-200 p-1.5 rounded-[20px] w-64 shadow-sm">
+                <button onclick="window.setStatus('all')" id="btnAll" class="flex-1 py-2 text-[9px] font-black uppercase rounded-xl status-btn-active">All Slots</button>
+                <button onclick="window.setStatus('open')" id="btnOpen" class="flex-1 py-2 text-[9px] font-black uppercase rounded-xl text-slate-400">Free Only</button>
+                <button onclick="window.setStatus('booked')" id="btnBooked" class="flex-1 py-2 text-[9px] font-black uppercase rounded-xl text-slate-400">Booked</button>
             </div>
         </div>
 
@@ -224,6 +234,7 @@
         const appId = 'timetable-manager-pro-v3';
 
         let master = [], cloudBookings = [], currentView = 'list', statusFilter = 'all';
+        let selectedDays = []; // Tracks multiple selected days
         let pendingCancelId = null;
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -245,6 +256,7 @@
             const now = new Date();
             document.getElementById('weekPicker').value = `${now.getFullYear()}-W${String(getWeek(now)).padStart(2, '0')}`;
             populateTimeFilter();
+            renderDaySelector();
             
             await signInAnonymously(auth);
 
@@ -264,6 +276,28 @@
                 }
             });
         }
+
+        function renderDaySelector() {
+            const container = document.getElementById('daySelector');
+            container.innerHTML = DAYS.map(day => `
+                <div onclick="window.toggleDay('${day}')" 
+                     id="tag-${day}"
+                     class="day-tag px-4 py-2 rounded-xl text-[10px] font-black uppercase">
+                    ${day}
+                </div>
+            `).join('');
+        }
+
+        window.toggleDay = (day) => {
+            if (selectedDays.includes(day)) {
+                selectedDays = selectedDays.filter(d => d !== day);
+                document.getElementById(`tag-${day}`).classList.remove('active');
+            } else {
+                selectedDays.push(day);
+                document.getElementById(`tag-${day}`).classList.add('active');
+            }
+            window.render();
+        };
 
         function updateStatusIndicator(msg, colorClass) {
             const dot = document.getElementById('statusDot');
@@ -330,23 +364,18 @@
             const typeFilterVal = (currentView === 'list' ? document.getElementById('typeFilter').value : document.getElementById('calendarTypeFilter').value);
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
             const checkDateVal = document.getElementById('dateFilter').value;
-            const dayFilterVal = document.getElementById('dayFilter').value;
 
             if (currentView === 'list') {
                 const list = document.getElementById('listView');
                 let results = [];
 
-                // 1. Process Master Slots
                 master.forEach(slot => {
                     const fullDay = DAY_MAP[slot.day] || slot.day;
                     
-                    // Filters
-                    if (dayFilterVal !== 'ALL' && fullDay !== dayFilterVal) return;
+                    if (selectedDays.length > 0 && !selectedDays.includes(fullDay)) return;
                     if (tFilter !== 'ALL' && slot.teacher !== tFilter) return;
                     if (timeFilterVal !== 'ALL' && cleanTime(slot.time) !== cleanTime(timeFilterVal)) return;
 
-                    // Check if there is a booking for this specific master slot on the "Check Date"
-                    // If no "Check Date", we show the master slot as "Free" unless status is "Booked"
                     let booking = null;
                     if (checkDateVal) {
                         booking = cloudBookings.find(b => 
@@ -369,12 +398,11 @@
                     results.push({ item: slot, b: booking });
                 });
 
-                // 2. Process Floating Bookings (those not in master, e.g. custom times)
                 cloudBookings.forEach(b => {
                     const fullDay = DAY_MAP[b.day] || b.day;
                     if (results.some(r => r.b && r.b.id === b.id)) return;
                     
-                    if (dayFilterVal !== 'ALL' && fullDay !== dayFilterVal) return;
+                    if (selectedDays.length > 0 && !selectedDays.includes(fullDay)) return;
                     if (tFilter !== 'ALL' && b.teacher !== tFilter) return;
                     if (timeFilterVal !== 'ALL' && cleanTime(b.time) !== cleanTime(timeFilterVal)) return;
                     if (checkDateVal && b.date !== checkDateVal) return;
@@ -488,10 +516,8 @@
             window.currentSlot = { teacher: t, day: d, time: tm };
             document.getElementById('modalInfo').innerText = `${t} | ${d} @ ${tm}`;
             
-            // Auto-fill date if "Check Date" filter is active
             const checkDate = document.getElementById('dateFilter').value;
             document.getElementById('stuDate').value = checkDate || '';
-            
             document.getElementById('stuName').value = '';
             document.getElementById('bookingModal').classList.remove('hidden');
         };
@@ -523,10 +549,32 @@
         window.closeCancelModal = () => document.getElementById('cancelModal').classList.add('hidden');
         window.closeModal = () => document.getElementById('bookingModal').classList.add('hidden');
 
+        window.clearFilters = () => {
+            // Reset all inputs
+            document.getElementById('searchInput').value = '';
+            document.getElementById('teacherFilter').value = 'ALL';
+            document.getElementById('calendarTeacherFilter').value = 'ALL';
+            document.getElementById('timeFilter').value = 'ALL';
+            document.getElementById('dateFilter').value = '';
+            document.getElementById('typeFilter').value = 'ALL';
+            document.getElementById('calendarTypeFilter').value = 'ALL';
+            
+            // Reset Multi-day
+            selectedDays = [];
+            DAYS.forEach(day => document.getElementById(`tag-${day}`).classList.remove('active'));
+            
+            // Reset Status
+            window.setStatus('all');
+            
+            window.render();
+            showToastPopup("Filters Cleared", "bg-slate-400");
+        };
+
         window.setView = (v) => {
             currentView = v;
             document.getElementById('listView').classList.toggle('hidden', v !== 'list');
             document.getElementById('listFilters').classList.toggle('hidden', v !== 'list');
+            document.getElementById('listStatusRow').classList.toggle('hidden', v !== 'list');
             document.getElementById('calendarView').classList.toggle('hidden', v !== 'calendar');
             document.getElementById('calendarFilters').classList.toggle('hidden', v !== 'calendar');
             document.getElementById('viewListBtn').className = `flex-1 py-2.5 text-xs font-black uppercase transition-all ${v === 'list' ? 'toggle-active' : 'text-slate-400'}`;
@@ -541,7 +589,7 @@
                 const b1 = document.getElementById('btn' + k);
                 const b2 = document.getElementById('btnCal' + k);
                 const isActive = k.toLowerCase() === v;
-                if(b1) b1.className = isActive ? "flex-1 py-2 text-[9px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[9px] font-black uppercase rounded-lg text-slate-400";
+                if(b1) b1.className = isActive ? "flex-1 py-2 text-[9px] font-black uppercase rounded-xl status-btn-active" : "flex-1 py-2 text-[9px] font-black uppercase rounded-xl text-slate-400";
                 if(b2) b2.className = isActive ? "flex-1 py-2 text-[10px] font-black uppercase rounded-lg status-btn-active" : "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
             });
             window.render();
