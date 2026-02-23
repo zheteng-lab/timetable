@@ -152,14 +152,14 @@
             document.getElementById('weekPicker').value = `${now.getFullYear()}-W${String(getWeekNumber(now)).padStart(2, '0')}`;
             await signInAnonymously(auth);
             
-            // LIVE CLOUD LISTENER
+            // Sync Bookings
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bookings'), (snap) => {
                 cloudBookings = snap.docs.map(d => ({ ...d.data(), id: d.id }));
                 updateStatus("Live", "bg-green-500");
                 window.render();
             });
 
-            // MASTER DATA LISTENER
+            // Sync Master Data
             onValue(ref(rtdb, 'master'), (snap) => {
                 const val = snap.val();
                 if(val) {
@@ -177,53 +177,83 @@
         };
 
         function renderList(weekDates) {
-            const grid = document.getElementById('resultsGrid');
-            const search = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('listView');
+            const searchName = document.getElementById('searchInput').value.toLowerCase();
             const teacher = document.getElementById('teacherFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+            const dayFilter = document.getElementById('dayFilter').value;
 
-            grid.innerHTML = masterData.filter(item => {
+            container.innerHTML = masterData.filter(item => {
                 const date = getDateStr(item.day, weekDates);
                 const b = findB(item.teacher, item.time, date);
+                
+                // Filter Logic
                 if (statusFilter === 'open' && b) return false;
+                if (statusFilter === 'booked' && !b) return false;
                 if (teacher !== 'ALL' && item.teacher !== teacher) return false;
-                if (search && !item.teacher.toLowerCase().includes(search) && (!b || !b.student.toLowerCase().includes(search))) return false;
+                if (dayFilter !== 'ALL' && item.day !== dayFilter) return false;
+                if (dateFilter && date !== dateFilter) return false;
+                if (searchName && (!b || !b.student.toLowerCase().includes(searchName)) && !item.teacher.toLowerCase().includes(searchName)) return false;
+                
                 return true;
             }).map(item => {
                 const date = getDateStr(item.day, weekDates);
                 const b = findB(item.teacher, item.time, date);
                 return `
-                <div class="availability-card p-4 rounded-3xl bg-white ${b ? 'booked-status' : ''}">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="text-[10px] font-black uppercase">${item.teacher}</div>
-                        <div class="text-[8px] font-black uppercase px-2 py-0.5 rounded ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Open'}</div>
+                <div class="availability-card p-6 rounded-[32px] bg-white ${b ? 'booked-status' : ''}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-[10px] font-black uppercase text-indigo-600">${item.teacher}</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">${item.subject}</p>
+                        </div>
+                        <span class="text-[8px] font-black uppercase px-2.5 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Open'}</span>
                     </div>
-                    <div class="text-[9px] font-bold text-slate-500 uppercase">${item.day} @ ${item.time}</div>
-                    ${b ? `<div class="text-[8px] font-black text-indigo-400 mt-1 uppercase">Date: ${date}</div>
-                           <div class="mt-4 p-3 rounded-2xl type-${b.type.toLowerCase()} text-[10px] font-black uppercase">${b.student}</div>
-                           <button onclick="window.cancelB('${b.id}')" class="w-full mt-2 text-[8px] font-black text-red-400 uppercase">Cancel</button>` 
-                        : `<button onclick="window.openB('${item.teacher}','${item.day}','${item.time}','${date}')" class="w-full mt-6 py-3 bg-slate-900 text-white rounded-2xl text-[9px] font-black uppercase">Book Now</button>`}
+                    <div class="text-sm font-black text-slate-700 uppercase mb-1">${item.day}</div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-4">${item.time}</div>
+                    
+                    ${b ? `
+                        <div class="p-4 rounded-2xl type-${b.type.toLowerCase()} mb-3">
+                            <p class="text-[8px] font-black opacity-50 uppercase mb-1">Student</p>
+                            <p class="text-xs font-black uppercase">${b.student}</p>
+                            <p class="text-[8px] font-bold mt-2 opacity-50">DATE: ${b.date}</p>
+                        </div>
+                        <button onclick="window.cancelB('${b.id}')" class="w-full py-2 text-[9px] font-black uppercase text-red-400 hover:text-red-600">Cancel Booking</button>
+                    ` : `
+                        <button onclick="window.openB('${item.teacher}','${item.day}','${item.time}','${date}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-200">Book Now</button>
+                    `}
                 </div>`;
             }).join('');
         }
 
         function renderCalendar(weekDates) {
             const cont = document.getElementById('calendarContainer');
-            let html = `<div class="grid grid-cols-[80px_repeat(7,1fr)] bg-slate-50 border-b border-slate-200">
-                <div class="p-4"></div>
-                ${DAYS.map((d,i) => `<div class="p-4 text-center border-r border-slate-100 font-black uppercase text-[9px] text-slate-400">${d.slice(0,3)}<br><span class="text-slate-500">${weekDates[i].toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span></div>`).join('')}
+            const teacherFilter = document.getElementById('calendarTeacherFilter').value;
+
+            let html = `<div class="grid grid-cols-[100px_repeat(7,1fr)] bg-slate-50 border-b border-slate-100">
+                <div class="p-6"></div>
+                ${DAYS.map((d,i) => `
+                    <div class="p-6 text-center border-l border-slate-100">
+                        <p class="font-black uppercase text-[10px] text-slate-400">${d.slice(0,3)}</p>
+                        <p class="text-xs font-black text-slate-800">${weekDates[i].toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</p>
+                    </div>`).join('')}
             </div>`;
             
             TIMES.forEach(time => {
-                html += `<div class="grid grid-cols-[80px_repeat(7,1fr)] border-b border-slate-50">
-                    <div class="p-2 text-[8px] font-bold text-slate-300 flex items-center justify-center">${time}</div>
+                html += `<div class="grid grid-cols-[100px_repeat(7,1fr)] border-b border-slate-50">
+                    <div class="p-4 text-[9px] font-black text-slate-300 flex items-center justify-center border-r border-slate-50">${time}</div>
                     ${DAYS.map(day => {
                         const date = getDateStr(day, weekDates);
-                        const slots = masterData.filter(s => s.day === day && clean(s.time) === clean(time));
-                        return `<div class="p-1 min-h-[50px] border-r border-slate-50 flex flex-col gap-1">
+                        const slots = masterData.filter(s => s.day === day && clean(s.time) === clean(time) && (teacherFilter === 'ALL' || s.teacher === teacherFilter));
+                        return `<div class="p-2 min-h-[70px] border-l border-slate-50 flex flex-col gap-2">
                             ${slots.map(s => {
                                 const b = findB(s.teacher, s.time, date);
+                                if (statusFilter === 'open' && b) return '';
+                                if (statusFilter === 'booked' && !b) return '';
+                                
                                 return `<div onclick="${b ? `window.cancelB('${b.id}')` : `window.openB('${s.teacher}','${s.day}','${s.time}','${date}')`}" 
-                                    class="text-[7px] p-1.5 rounded-lg font-black uppercase truncate cursor-pointer ${b ? `type-${b.type.toLowerCase()} border` : 'bg-slate-900 text-white'}">${b ? b.student : s.teacher}</div>`;
+                                    class="text-[8px] p-2.5 rounded-xl font-black uppercase truncate cursor-pointer shadow-sm ${b ? `type-${b.type.toLowerCase()}` : 'bg-slate-900 text-white'}">
+                                    ${b ? b.student : s.teacher}
+                                </div>`;
                             }).join('')}
                         </div>`;
                     }).join('')}
@@ -232,7 +262,7 @@
             cont.innerHTML = html;
         }
 
-        // LOGIC
+        // Logic Helpers
         function clean(t) { return t ? t.toLowerCase().replace(/\s/g,'').replace(/\./g,'') : ''; }
         function findB(t, tm, d) { return cloudBookings.find(b => b.teacher === t && clean(b.time) === clean(tm) && b.date === d); }
         function getDateStr(day, dates) { const i = DAYS.indexOf(day); return (i !== -1 && dates[i]) ? dates[i].toISOString().split('T')[0] : null; }
@@ -249,25 +279,49 @@
             const student = document.getElementById('studentInput').value;
             const date = document.getElementById('dateInput').value;
             const type = document.getElementById('typeInput').value;
-            if(!student || !date) return alert("Fill all fields");
+            if(!student || !date) return alert("Please enter name and date");
 
             const id = `${window.activeSlot.teacher}_${date}_${clean(window.activeSlot.time)}`.replace(/[^a-zA-Z0-9]/g, '');
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { ...window.activeSlot, student, date, type });
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { 
+                ...window.activeSlot, student, date, type 
+            });
+            
+            showToast("Booking Successful!");
             window.closeModal();
         };
 
         window.cancelB = async (id) => {
             if(confirm("Cancel this booking?")) {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id));
+                showToast("Booking Cancelled");
             }
         };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
 
         window.setView = (v) => {
             currentView = v;
             document.getElementById('listView').classList.toggle('hidden', v !== 'list');
+            document.getElementById('listFilters').classList.toggle('hidden', v !== 'list');
             document.getElementById('calendarView').classList.toggle('hidden', v !== 'calendar');
-            document.getElementById('viewListBtn').className = `flex-1 py-1.5 text-[10px] uppercase transition-all ${v === 'list' ? 'toggle-active' : 'toggle-inactive'}`;
-            document.getElementById('viewCalendarBtn').className = `flex-1 py-1.5 text-[10px] uppercase transition-all ${v === 'calendar' ? 'toggle-active' : 'toggle-inactive'}`;
+            document.getElementById('calendarFilters').classList.toggle('hidden', v !== 'calendar');
+            
+            document.getElementById('viewListBtn').className = `flex-1 py-2.5 text-xs font-black uppercase transition-all ${v === 'list' ? 'toggle-active' : 'text-slate-400'}`;
+            document.getElementById('viewCalendarBtn').className = `flex-1 py-2.5 text-xs font-black uppercase transition-all ${v === 'calendar' ? 'toggle-active' : 'text-slate-400'}`;
+            window.render();
+        };
+
+        window.setStatusFilter = (v) => {
+            statusFilter = v;
+            ['all','open','booked'].forEach(id => {
+                const btn = document.getElementById('btnFilter' + id);
+                if(btn) btn.className = (id === v) ? "flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-white shadow-sm text-indigo-600" : "flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-400";
+            });
             window.render();
         };
 
@@ -291,14 +345,20 @@
             else start.setDate(simple.getDate() + 8 - simple.getDay());
             return Array.from({length:7}, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return d; });
         }
+
         function populateTeachers() {
-            const s = document.getElementById('teacherFilter');
-            const t = [...new Set(masterData.map(i => i.teacher))].sort();
-            s.innerHTML = '<option value="ALL">All Teachers</option>' + t.map(n => `<option value="${n}">${n}</option>`).join('');
+            const tList = [...new Set(masterData.map(i => i.teacher))].sort();
+            const opts = '<option value="ALL">All Teachers</option>' + tList.map(n => `<option value="${n}">${n}</option>`).join('');
+            document.getElementById('teacherFilter').innerHTML = opts;
+            document.getElementById('calendarTeacherFilter').innerHTML = opts;
         }
-        function updateStatus(t, c) { document.getElementById('statusText').innerText = t; document.getElementById('statusDot').className = `w-1.5 h-1.5 rounded-full ${c}`; }
+
+        function updateStatus(t, c) { 
+            document.getElementById('statusText').innerText = t; 
+            document.getElementById('statusDot').className = `w-2 h-2 rounded-full ${c}`; 
+        }
+
         window.closeModal = () => document.getElementById('bookingModal').classList.add('hidden');
-        window.setStatusFilter = (v) => { statusFilter = v; window.render(); };
 
         init();
     </script>
