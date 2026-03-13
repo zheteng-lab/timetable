@@ -214,16 +214,17 @@
         </div>
     </div>
 
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
+        import { getAuth, signInAnonymously } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
+        import { getDatabase, ref, onValue } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js)";
 
         const firebaseConfig = {
             apiKey: "AIzaSyATmsswJCUH2kzgyqhtgSHfwAfJLWhMBK0",
             authDomain: "class-one-students-enquiry.firebaseapp.com",
-            databaseURL: "https://class-one-students-enquiry-default-rtdb.asia-southeast1.firebasedatabase.app",
+            databaseURL: "[https://class-one-students-enquiry-default-rtdb.asia-southeast1.firebasedatabase.app](https://class-one-students-enquiry-default-rtdb.asia-southeast1.firebasedatabase.app)",
             projectId: "class-one-students-enquiry",
             appId: "1:808629452867:web:fc65ad3a56b08b258fd4f6"
         };
@@ -404,8 +405,13 @@
                         );
                     }
 
-                    if (statusFilter === 'open' && booking) return;
-                    if (statusFilter === 'booked' && !booking) return;
+                    // CHECK GOOGLE SHEET STATUS
+                    const isSheetBooked = slot.status && String(slot.status).toLowerCase() === 'booked';
+                    const isEffectivelyBooked = booking || isSheetBooked;
+
+                    // RESPECT FILTERS
+                    if (statusFilter === 'open' && isEffectivelyBooked) return;
+                    if (statusFilter === 'booked' && !isEffectivelyBooked) return;
 
                     const matchesSearch = !searchVal || 
                         slot.teacher.toLowerCase().includes(searchVal) || 
@@ -417,7 +423,6 @@
                     results.push({ item: slot, b: booking });
                 });
 
-                // Handle bookings without a master slot (manual/special additions)
                 cloudBookings.forEach(b => {
                     const fullDay = DAY_MAP[b.day] || b.day;
                     if (results.some(r => r.b && r.b.id === b.id)) return;
@@ -457,15 +462,19 @@
             const fullDay = DAY_MAP[rawDay] || rawDay;
             const time = b ? b.time : item.time;
             const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Session') : item.subject;
+            
+            // COMBINE WEB BOOKING AND SHEET STATUS
+            const isSheetBooked = !b && item && item.status && String(item.status).toLowerCase() === 'booked';
+            const isBooked = b || isSheetBooked;
 
             return `
-            <div class="card p-6 rounded-[32px] bg-white ${b ? 'card-booked' : 'shadow-sm'}">
+            <div class="card p-6 rounded-[32px] bg-white ${isBooked ? 'card-booked' : 'shadow-sm'}">
                 <div class="flex justify-between items-start mb-4">
                     <div class="max-w-[70%]">
                         <p class="text-[10px] font-black uppercase text-indigo-600 truncate">${teacher}</p>
                         <p class="text-[8px] font-bold text-slate-400 uppercase truncate">${subject}</p>
                     </div>
-                    <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${b ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${b ? 'Booked' : 'Available'}</span>
+                    <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${isBooked ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${isBooked ? 'Booked' : 'Available'}</span>
                 </div>
                 <p class="text-sm font-black text-slate-700 uppercase">${fullDay}</p>
                 <p class="text-[9px] font-bold text-slate-400 uppercase mb-4">${time}</p>
@@ -476,6 +485,12 @@
                         <p class="text-[9px] font-black mt-1 uppercase opacity-80">${b.date} | ${b.type}</p>
                     </div>
                     <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-colors">Cancel Booking</button>
+                ` : isSheetBooked ? `
+                    <div class="p-4 rounded-2xl bg-slate-100 mb-3 border border-slate-200">
+                        <p class="text-[7px] font-black uppercase opacity-50">Status</p>
+                        <p class="text-xs font-black uppercase truncate text-slate-400">Reserved in Sheet</p>
+                    </div>
+                    <button disabled class="w-full py-2 text-slate-400 rounded-xl text-[9px] font-black uppercase bg-slate-50 cursor-not-allowed">Unavailable</button>
                 ` : `
                     <button onclick="window.openBookingModal('${teacher}','${fullDay}','${time}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">Book Now</button>
                 `}
@@ -507,20 +522,40 @@
                                 if (statusFilter !== 'open') displayItems.push({ isBooked: true, data: b });
                             }
                         });
+                        
                         if (statusFilter !== 'booked' && typeFilter === 'ALL') {
                             masterSlots.forEach(s => {
-                                if (!dayBookings.some(b => b.teacher === s.teacher)) displayItems.push({ isBooked: false, data: s });
+                                if (!dayBookings.some(b => b.teacher === s.teacher)) {
+                                    // Handle sheet-level booked status
+                                    const isSheetBooked = s.status && String(s.status).toLowerCase() === 'booked';
+                                    if (statusFilter === 'open' && isSheetBooked) return;
+                                    if (statusFilter === 'booked' && !isSheetBooked) return;
+                                    
+                                    displayItems.push({ isBooked: isSheetBooked, data: s, isSheetOnly: isSheetBooked });
+                                }
                             });
                         }
 
                         return `<div class="p-1 min-h-[80px] border-l border-slate-50 flex flex-col gap-1.5">
                             ${displayItems.map(item => {
-                                const b = item.isBooked ? item.data : null;
-                                const s = !item.isBooked ? item.data : null;
-                                return `<div onclick="${b ? `window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')` : `window.openBookingModal('${s.teacher}','${day}','${s.time}')`}" 
-                                     class="text-[8px] p-2 rounded-xl font-black uppercase truncate cursor-pointer shadow-sm ${b ? `type-${b.type.toLowerCase()}` : 'bg-slate-900 text-white'}">
-                                     ${b ? `<span class="opacity-60 text-[7px] block">${b.teacher}</span>${b.student}` : s.teacher}
-                                </div>`;
+                                const b = item.isBooked && !item.isSheetOnly ? item.data : null;
+                                const s = item.data;
+                                
+                                if (item.isSheetOnly) {
+                                    return `<div class="text-[8px] p-2 rounded-xl font-black uppercase truncate shadow-sm bg-slate-200 text-slate-500">
+                                        <span class="opacity-60 text-[7px] block">${s.teacher}</span>SHEET BOOKED
+                                    </div>`;
+                                } else if (b) {
+                                    return `<div onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" 
+                                         class="text-[8px] p-2 rounded-xl font-black uppercase truncate cursor-pointer shadow-sm type-${b.type.toLowerCase()}">
+                                         <span class="opacity-60 text-[7px] block">${b.teacher}</span>${b.student}
+                                    </div>`;
+                                } else {
+                                    return `<div onclick="window.openBookingModal('${s.teacher}','${day}','${s.time}')" 
+                                         class="text-[8px] p-2 rounded-xl font-black uppercase truncate cursor-pointer shadow-sm bg-slate-900 text-white">
+                                         ${s.teacher}
+                                    </div>`;
+                                }
                             }).join('')}
                         </div>`;
                     }).join('')}
