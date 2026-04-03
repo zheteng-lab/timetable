@@ -257,14 +257,21 @@
         };
         const SUBJECTS = ['BC', 'BM', 'EN', 'SOK'];
 
-        const TIMES = [];
-        for(let h=8; h<=21; h++){ 
-            for(let m of ['00','30']){ 
-                const am = h >= 12 ? 'pm' : 'am'; 
-                const h12 = h % 12 || 12; 
-                TIMES.push(`${h12}:${m}${am}`); 
-            } 
-        }
+        // Times array is now dynamic based on sheet rows!
+        let TIMES = [];
+
+        // Helper to chronologically sort extracted times (e.g. 8:00 AM -> 480)
+        const parseTimeStr = (t) => {
+            if (!t) return 0;
+            const clean = String(t).toLowerCase().replace(/\s/g, '');
+            const isPM = clean.includes('pm');
+            const parts = clean.replace(/[^\d:]/g, '').split(':');
+            let h = parseInt(parts[0], 10) || 0;
+            let m = parseInt(parts[1], 10) || 0;
+            if (isPM && h !== 12) h += 12;
+            if (!isPM && h === 12) h = 0;
+            return h * 60 + m;
+        };
 
         // DEEP DATA SCANNER - Prevents random IDs showing in Teacher dropdown
         const scanDatabase = (obj, path = []) => {
