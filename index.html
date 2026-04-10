@@ -418,15 +418,16 @@
             });
         }
 
-        function getNextDayDate(dayName) {
-            const dayIndex = DAYS.indexOf(dayName);
-            const now = new Date();
-            const currentDay = (now.getDay() + 6) % 7;
-            const diff = (dayIndex - currentDay + 7) % 7;
-            const targetDate = new Date(now);
-            targetDate.setDate(now.getDate() + diff);
-            return targetDate.toISOString().split('T')[0];
-        }
+        window.getNextDayDate = (dayName) => {
+        const now = new Date();
+        const currentDay = now.getDay(); 
+        const targetDay = DAYS.indexOf(dayName); 
+        const adjustedCurrent = currentDay === 0 ? 6 : currentDay - 1;
+        const diff = targetDay - adjustedCurrent;
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() + diff);
+        return targetDate.toISOString().split('T')[0];
+    };
 
         function updateGlobalCounts() {
             const getC = (type) => cloudBookings.filter(b => b.type === type).length;
@@ -487,22 +488,19 @@
                 });
 
                 cloudBookings.forEach(b => {
-                    if (combinedResults.some(res => res.b && res.b.id === b.id)) return;
-                    let matches = true;
-                    
-                    const mItem = master.find(m => m.teacher === b.teacher);
-                    const bSubject = mItem ? mItem.subject : '';
+                    const isAlreadyRendered = combinedResults.some(res => res.b && res.b.id === b.id);
+                    if (isAlreadyRendered) return;
 
+                    let matches = true;
                     if (teacher !== 'ALL' && b.teacher !== teacher) matches = false;
-                    if (subjectSel !== 'ALL' && bSubject !== subjectSel) matches = false;
                     if (timeSel !== 'ALL' && cleanTime(b.time) !== cleanTime(timeSel)) matches = false;
                     if (dayFilter !== 'ALL' && b.day !== dayFilter) matches = false;
                     if (dFilter && b.date !== dFilter) matches = false;
                     if (typeSelect !== 'ALL' && b.type !== typeSelect) matches = false;
-                    if (statusFilter === 'open') matches = false;
-                    if (search && !b.student.toLowerCase().includes(search) && !b.teacher.toLowerCase().includes(search)) matches = false;
                     
-                    if (matches) combinedResults.push({ item: null, b: b, date: b.date });
+                    if (matches && statusFilter !== 'open') {
+                        combinedResults.push({ item: null, b: b, date: b.date });
+                    }
                 });
 
                 combinedResults.sort((a,b) => {
@@ -644,7 +642,13 @@
         }
 
         const cleanTime = (t) => t ? t.toLowerCase().replace(/\s/g,'').replace(/\./g,'').replace(/:/g,'') : '';
-        const findBooking = (t, tm, d) => cloudBookings.find(b => b.teacher === t && cleanTime(b.time) === cleanTime(tm) && b.date === d);
+        const findBooking = (t, tm, d) => {
+            return cloudBookings.find(b => 
+                b.teacher === t && 
+                cleanTime(b.time) === cleanTime(tm) && 
+                b.date === d
+            );
+        };
         const getDateString = (day, dates) => { const i = DAYS.indexOf(day); return dates[i] ? dates[i].toISOString().split('T')[0] : null; };
 
         window.openBookingModal = (t, d, tm, dt) => {
@@ -662,8 +666,17 @@
             const date = document.getElementById('stuDate')?.value;
             const type = document.getElementById('stuType')?.value || 'Trial';
             if(!name || !date) return;
-            const id = `${window.currentSlot.teacher}_${date}_${cleanTime(window.currentSlot.time)}`.replace(/[^a-zA-Z0-9]/g, '');
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { ...window.currentSlot, student: name, date, type, id });
+
+            const cleanTm = cleanTime(window.currentSlot.time);
+            const id = `${window.currentSlot.teacher}_${date}_${cleanTm}`.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bookings', id), { 
+                ...window.currentSlot, 
+                student: name, 
+                date: date, 
+                type: type, 
+                id: id 
+            });
             showToastPopup("Class Booked Successfully", "bg-emerald-400");
             window.closeModal();
         };
