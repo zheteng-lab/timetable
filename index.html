@@ -467,7 +467,7 @@
                     // 2. If a specific date filter is active, only show the slot if it matches that date
                     if (dFilter && calculatedDate !== dFilter) return;
 
-                    const slotDate = dFilter || calculatedDate;
+                    const slotDate = dFilter || "";
                     const booking = findBooking(slot.teacher, slot.time, slotDate);
                     
                     let matches = true;
@@ -527,7 +527,7 @@
             const teacher = b ? b.teacher : item.teacher;
             const day = b ? b.day : item.day;
             const time = b ? b.time : item.time;
-            const displayDate = b ? b.date : slotDate;
+            const displayDate = b ? b.date : (slotDate || "Select Date in Modal");
             const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Class') : item.subject;
 
             const isSheetBooked = !b && item && item.status && String(item.status).toLowerCase() === 'booked';
