@@ -461,7 +461,13 @@
                 let combinedResults = [];
 
                 master.forEach(slot => {
-                    const slotDate = dFilter || getNextDayDate(slot.day);
+                    // 1. Calculate the actual date for this specific slot's day
+                    const calculatedDate = getNextDayDate(slot.day);
+                    
+                    // 2. If a specific date filter is active, only show the slot if it matches that date
+                    if (dFilter && calculatedDate !== dFilter) return;
+
+                    const slotDate = dFilter || calculatedDate;
                     const booking = findBooking(slot.teacher, slot.time, slotDate);
                     
                     let matches = true;
