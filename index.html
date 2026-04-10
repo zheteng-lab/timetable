@@ -285,7 +285,6 @@
 
             if (dayKey && timeKey && typeof obj[dayKey] !== 'object' && typeof obj[timeKey] !== 'object') {
                 let teacherName = '';
-
                 const teacherKeys = ['teacher', 'name', 'tutor', 'instructor', 'sheet', 'sheetname', 'tab', 'tabname'];
                 const explicitKey = keys.find(k => teacherKeys.includes(normalize(k)));
                 
@@ -294,15 +293,15 @@
                 } else {
                     for (let i = path.length - 1; i >= 0; i--) {
                         const p = String(path[i]);
+                        // ADDED 'feedback' to the list below to ignore it
+                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normalize(p))) continue;
                         if (/^\d+$/.test(p)) continue;
                         if (p.startsWith('-') && p.length > 15) continue;
-                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normalize(p))) continue;
                         
                         teacherName = p; 
                         break;
                     }
                 }
-
                 if (!teacherName) teacherName = 'Unknown Teacher';
 
                 const subjKey = keys.find(k => normalize(k).includes('subject'));
@@ -461,14 +460,9 @@
                 let combinedResults = [];
 
                 master.forEach(slot => {
-                    // 1. Calculate the actual date for this specific slot's day
-                    const calculatedDate = getNextDayDate(slot.day);
-                    
-                    // 2. If a specific date filter is active, only show the slot if it matches that date
-                    if (dFilter && calculatedDate !== dFilter) return;
-
-                    const slotDate = dFilter || "";
-                    const booking = findBooking(slot.teacher, slot.time, slotDate);
+                    // Change: Do not automatically calculate the date if no filter is set
+                    const slotDate = dFilter || ""; 
+                    const booking = slotDate ? findBooking(slot.teacher, slot.time, slotDate) : null;
                     
                     let matches = true;
                     if (teacher !== 'ALL' && slot.teacher !== teacher) matches = false;
@@ -480,9 +474,8 @@
                         const searchMatch = !search || 
                                           slot.teacher.toLowerCase().includes(search) || 
                                           (booking && booking.student.toLowerCase().includes(search));
-                        const typeMatch = typeSelect === 'ALL' || (booking && booking.type === typeSelect);
-
-                        if (searchMatch && typeMatch) {
+                        
+                        if (searchMatch) {
                             const isSheetBooked = slot.status && String(slot.status).toLowerCase() === 'booked';
                             const isEffectivelyBooked = booking || isSheetBooked;
 
@@ -527,8 +520,9 @@
             const teacher = b ? b.teacher : item.teacher;
             const day = b ? b.day : item.day;
             const time = b ? b.time : item.time;
-            const displayDate = b ? b.date : (slotDate || "Select Date in Modal");
-            const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Class') : item.subject;
+            
+            // Change: If no date is provided and it's not booked, show a placeholder
+            const displayDate = b ? b.date : (slotDate || "Date: Not Selected");
 
             const isSheetBooked = !b && item && item.status && String(item.status).toLowerCase() === 'booked';
             const isBooked = b || isSheetBooked;
