@@ -296,7 +296,7 @@
                         const p = String(path[i]);
                         if (/^\d+$/.test(p)) continue;
                         if (p.startsWith('-') && p.length > 15) continue;
-                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records'].includes(normalize(p))) continue;
+                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normalize(p))) continue;
                         
                         teacherName = p; 
                         break;
