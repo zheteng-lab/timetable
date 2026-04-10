@@ -293,8 +293,10 @@
                 } else {
                     for (let i = path.length - 1; i >= 0; i--) {
                         const p = String(path[i]);
-                        // ADDED 'feedback' to the list below to ignore it
-                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normalize(p))) continue;
+                        const normP = normalize(p); // Normalize for safety
+                        
+                        // ADDED 'feedback' to this ignore list
+                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normP)) continue;
                         if (/^\d+$/.test(p)) continue;
                         if (p.startsWith('-') && p.length > 15) continue;
                         
@@ -460,9 +462,13 @@
                 let combinedResults = [];
 
                 master.forEach(slot => {
-                    // Change: Do not automatically calculate the date if no filter is set
+                    // Logic: Use the filter date if it exists, otherwise leave it empty
+                    // This prevents "wrong dates" from appearing on cards automatically
+                    const calculatedDate = getNextDayDate(slot.day);
+                    if (dFilter && calculatedDate !== dFilter) return;
+
                     const slotDate = dFilter || ""; 
-                    const booking = slotDate ? findBooking(slot.teacher, slot.time, slotDate) : null;
+                    const booking = findBooking(slot.teacher, slot.time, slotDate);
                     
                     let matches = true;
                     if (teacher !== 'ALL' && slot.teacher !== teacher) matches = false;
@@ -521,8 +527,7 @@
             const day = b ? b.day : item.day;
             const time = b ? b.time : item.time;
             
-            // Change: If no date is provided and it's not booked, show a placeholder
-            const displayDate = b ? b.date : (slotDate || "Date: Not Selected");
+            const displayDate = b ? b.date : (slotDate || "Select Date in Modal");
 
             const isSheetBooked = !b && item && item.status && String(item.status).toLowerCase() === 'booked';
             const isBooked = b || isSheetBooked;
