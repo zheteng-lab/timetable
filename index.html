@@ -1,3 +1,4 @@
+    
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +12,29 @@
         .card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #f1f5f9; }
         .card:hover { transform: translateY(-2px); border-color: #e2e8f0; }
         .card-booked { border-color: #4f46e5 !important; background-color: #ffffff; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1); }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .card-past .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            top: 0;
+            left: 0;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
         .toggle-active { background-color: white !important; color: #4f46e5 !important; font-weight: 900 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .status-btn-active { background-color: #1e293b !important; color: white !important; }
         
@@ -26,31 +50,6 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-
-        /* Add this to your <style> section */
-        .card-inner {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        transition: transform 0.6s;
-        transform-style: preserve-3d;    
-        }
-
-        .card-past .card-inner {
-        transform: rotateY(180deg);
-        }
-
-        .card-front, .card-back {
-         position: absolute;
-        width: 100%;
-        height: 100%;
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-        }
-
-        .card-back {
-        transform: rotateY(180deg);
-        }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -251,7 +250,7 @@
             </div>
         </div>
     </div>
-    
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -310,6 +309,7 @@
 
             if (dayKey && timeKey && typeof obj[dayKey] !== 'object' && typeof obj[timeKey] !== 'object') {
                 let teacherName = '';
+
                 const teacherKeys = ['teacher', 'name', 'tutor', 'instructor', 'sheet', 'sheetname', 'tab', 'tabname'];
                 const explicitKey = keys.find(k => teacherKeys.includes(normalize(k)));
                 
@@ -318,17 +318,15 @@
                 } else {
                     for (let i = path.length - 1; i >= 0; i--) {
                         const p = String(path[i]);
-                        const normP = normalize(p); // Normalize for safety
-                        
-                        // ADDED 'feedback' to this ignore list
-                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normP)) continue;
                         if (/^\d+$/.test(p)) continue;
                         if (p.startsWith('-') && p.length > 15) continue;
+                        if (['master', 'sheet1', 'sheet2', 'data', 'slots', 'records', 'feedback'].includes(normalize(p))) continue;
                         
                         teacherName = p; 
                         break;
                     }
                 }
+
                 if (!teacherName) teacherName = 'Unknown Teacher';
 
                 const subjKey = keys.find(k => normalize(k).includes('subject'));
@@ -487,12 +485,13 @@
                 let combinedResults = [];
 
                 master.forEach(slot => {
-                    // Logic: Use the filter date if it exists, otherwise leave it empty
-                    // This prevents "wrong dates" from appearing on cards automatically
+                    // 1. Calculate the actual date for this specific slot's day
                     const calculatedDate = getNextDayDate(slot.day);
+                    
+                    // 2. If a specific date filter is active, only show the slot if it matches that date
                     if (dFilter && calculatedDate !== dFilter) return;
 
-                    const slotDate = dFilter || ""; 
+                    const slotDate = dFilter || "";
                     const booking = findBooking(slot.teacher, slot.time, slotDate);
                     
                     let matches = true;
@@ -505,8 +504,9 @@
                         const searchMatch = !search || 
                                           slot.teacher.toLowerCase().includes(search) || 
                                           (booking && booking.student.toLowerCase().includes(search));
-                        
-                        if (searchMatch) {
+                        const typeMatch = typeSelect === 'ALL' || (booking && booking.type === typeSelect);
+
+                        if (searchMatch && typeMatch) {
                             const isSheetBooked = slot.status && String(slot.status).toLowerCase() === 'booked';
                             const isEffectivelyBooked = booking || isSheetBooked;
 
@@ -551,46 +551,45 @@
             const teacher = b ? b.teacher : item.teacher;
             const day = b ? b.day : item.day;
             const time = b ? b.time : item.time;
-
-            const today = new Date().toISOString().split('T')[0];
-            const isPast = displayDate && displayDate !== "Select Date in Modal" && displayDate < today;
-            
             const displayDate = b ? b.date : (slotDate || "Select Date in Modal");
+            const subject = b ? (master.find(m => m.teacher === b.teacher)?.subject || 'Special Class') : item.subject;
 
             const isSheetBooked = !b && item && item.status && String(item.status).toLowerCase() === 'booked';
             const isBooked = b || isSheetBooked;
+            const today = new Date().toISOString().split('T')[0];
+            // If there is a date, check if it's strictly less than today
+            const isPast = displayDate && displayDate !== "Select Date in Modal" && displayDate < today;
 
             return `
-            <div class="card p-6 rounded-[32px] bg-white ${isBooked ? 'card-booked' : 'shadow-sm'}">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="max-w-[70%]">
-                        <p class="text-[10px] font-black uppercase text-indigo-600 truncate">${teacher}</p>
-                        <p class="text-[8px] font-bold text-slate-400 uppercase truncate">${subject}</p>
+            <div class="card p-0 rounded-[32px] bg-transparent ${isPast ? 'card-past' : ''}" style="perspective: 1000px; min-height: 280px;">
+                <div class="card-inner w-full h-full">
+        
+                    <div class="card-front p-6 rounded-[32px] bg-white border border-slate-200 ${isBooked ? 'card-booked' : ''}">
+                          <div class="flex justify-between items-start mb-4">
+                            <div class="max-w-[70%]">
+                                <p class="text-[10px] font-black uppercase text-indigo-600 truncate">${teacher}</p>
+                                <p class="text-[8px] font-bold text-slate-400 uppercase truncate">${subject}</p>
+                            </div>
+                            <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${isBooked ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${isBooked ? 'Booked' : 'Available'}</span>
+                        </div>
+                        <p class="text-sm font-black text-slate-700 uppercase">${day}</p>
+                        <div class="flex items-center gap-2 mb-4">
+                             <p class="text-[9px] font-bold text-slate-400 uppercase">${displayDate} @ ${time}</p>
+                        </div>
+                        ${ /* Rest of your existing buttons logic here */ '' }
                     </div>
-                    <span class="text-[7px] font-black uppercase px-2 py-1 rounded-lg ${isBooked ? 'bg-indigo-600 text-white' : 'bg-emerald-50 text-emerald-600'}">${isBooked ? 'Booked' : 'Available'}</span>
+
+                    <div class="card-back p-6 rounded-[32px] bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
+                        <div class="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mb-3">
+                            <span class="text-xl">🔒</span>
+                        </div>
+                        <p class="text-[10px] font-black uppercase text-slate-400">Class Expired</p>
+                        <p class="text-[14px] font-black text-slate-600 uppercase mt-1">${displayDate}</p>
+                        <p class="text-[8px] font-bold text-slate-400 mt-4 px-4">THIS SLOT IS NO LONGER AVAILABLE FOR BOOKING</p>
+                    </div>
+        
                 </div>
-                <p class="text-sm font-black text-slate-700 uppercase">${day}</p>
-                <div class="flex items-center gap-2 mb-4">
-                     <p class="text-[9px] font-bold text-slate-400 uppercase">${displayDate} @ ${time}</p>
-                </div>
-                ${b ? `
-                    <div class="p-4 rounded-2xl type-${b.type.toLowerCase()} mb-3">
-                        <p class="text-[7px] font-black uppercase opacity-50">Student</p>
-                        <p class="text-xs font-black uppercase truncate">${b.student}</p>
-                        <p class="text-[9px] font-black mt-1 uppercase opacity-80">${b.type}</p>
-                    </div>
-                    <button onclick="window.triggerCancel('${b.id}', '${b.student}', '${b.date}', '${b.time}')" class="w-full py-2 text-red-500 rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-colors">Cancel Booking</button>
-                ` : isSheetBooked ? `
-                    <div class="p-4 rounded-2xl bg-slate-100 mb-3 border border-slate-200">
-                        <p class="text-[7px] font-black uppercase opacity-50">Status</p>
-                        <p class="text-xs font-black uppercase truncate text-slate-400">Reserved in Sheet</p>
-                    </div>
-                    <button disabled class="w-full py-2 text-slate-400 rounded-xl text-[9px] font-black uppercase bg-slate-50 cursor-not-allowed">Unavailable</button>
-                ` : `
-                    <button onclick="window.openBookingModal('${teacher}','${day}','${time}','${slotDate}')" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">Book Now</button>
-                `}
             </div>`;
-        }
 
         function renderWeeklyView(weekDates, tFilter, subjectFilter, typeFilter) {
             const container = document.getElementById('calendarContainer');
