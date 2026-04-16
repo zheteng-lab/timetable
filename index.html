@@ -251,20 +251,6 @@
             </div>
         </div>
     </div>
-
-    return `
-    <div class="card p-0 rounded-[32px] bg-transparent ${isPast ? 'card-past' : ''}" style="perspective: 1000px; min-height: 300px;">
-        <div class="card-inner">
-            <div class="card-front bg-white p-6 rounded-[32px] border border-slate-200">
-                ${ /* Your existing card HTML goes here */ '' }
-            </div>
-
-            <div class="card-back bg-slate-200 p-6 rounded-[32px] flex flex-col items-center justify-center border border-slate-300">
-                <p class="text-slate-500 font-black uppercase text-xs">Slot Expired</p>
-                <p class="text-[10px] text-slate-400 font-bold">${displayDate}</p>
-            </div>
-        </div>
-    </div>`;
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
