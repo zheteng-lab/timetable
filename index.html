@@ -560,6 +560,7 @@
             const today = new Date().toISOString().split('T')[0];
             // If there is a date, check if it's strictly less than today
             const isPast = displayDate && displayDate !== "Select Date in Modal" && displayDate < today;
+            }
 
             return `
             <div class="card p-0 rounded-[32px] bg-transparent ${isPast ? 'card-past' : ''}" style="perspective: 1000px; height: 350px;">
@@ -590,7 +591,9 @@
                     </div>
         
                 </div>
-            </div>`;
+            </div>`; // 
+            } //
+        
 
         function renderWeeklyView(weekDates, tFilter, subjectFilter, typeFilter) {
             const container = document.getElementById('calendarContainer');
